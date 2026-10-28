@@ -981,7 +981,7 @@
       border: 1px solid var(--border-subtle);
       border-radius: 6px;
       display: flex;
-      align-items: flex-start; /* 讓長流程圖從上方依序滾動檢視 */
+      align-items: flex-start;
       justify-content: center;
       padding: 20px;
     }
@@ -1044,9 +1044,7 @@
     .clickable:hover { opacity: 0.9; }
 
     .t-span-note {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif;
-      font-size: 12px;
-      font-weight: 700;
+      font: 600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif !important;
     }
 
     @media (max-width: 1280px) {
@@ -1065,7 +1063,7 @@
   <div class="brand">
     <h1>通訊時序流程圖產生器</h1>
     <span class="badge">PRO</span>
-    <span class="version-tag" id="versionBadge" title="點擊檢視完整版本演進歷程">v2.9</span>
+    <span class="version-tag" id="versionBadge" title="點擊檢視完整版本演進歷程">v2.9.1</span>
     <span class="designer-tag">Designed by WeiHsun</span>
   </div>
 
@@ -1281,20 +1279,34 @@
   </div>
 </div>
 
-<!-- 版本歷程彈窗 (完整回溯 1.0 至最新版，支援獨立滑順捲動) -->
+<!-- 版本歷程彈窗 -->
 <div class="modal-backdrop" id="changelogModal" hidden>
   <div class="modal-window" style="width: 620px;">
     <div class="modal-header">
       <span style="display:flex; align-items:center; gap:8px;">
         <span>🕒 版本演進歷程 (Version History)</span>
-        <span class="version-tag" style="cursor:default;">v2.9 Release</span>
+        <span class="version-tag" style="cursor:default;">v2.9.1 Release</span>
       </span>
       <button class="tree-btn" id="closeChangelogModal">✕ (Esc)</button>
     </div>
     <div class="modal-body">
       <div class="changelog-scroll-wrapper">
         <div class="changelog-timeline">
+          <!-- 最新版本 v2.9.1 -->
           <div class="changelog-item current">
+            <div class="changelog-header">
+              <span class="changelog-version">v2.9.1 正式版 (文字規格統一 & 備註色彩與介面精簡)</span>
+              <span class="changelog-date">2026-10-28</span>
+            </div>
+            <ul class="changelog-list">
+              <li><strong>畫布文字樣式規格全面統一</strong>：全畫布文字（包含節點標籤、連線名稱、方法說明、逾時警示、區間說明及備註內容）均嚴格遵循 <code>.t-label</code> 樣式（<code>font: 600 12px</code> 系統無襯線字型），確保排版高度和諧一致。</li>
+              <li><strong>備註文字色彩下拉雙向同步</strong>：修復更換備註顏色（點擊色票或選色器）時下拉選單未跟著連動的問題，確保色彩數值精準匹配與即時呈現。</li>
+              <li><strong>介面精簡優化</strong>：全面移除斜線底紋按鈕開關，維持簡約高質感的純色底色排版。</li>
+              <li><strong>文字寬度測量精度同步</strong>：更新 <code>measureCtx</code> 測量引擎的字型與字級設定為 12px，徹底杜絕節點名稱與備註文字排版計算偏差造成的溢出問題。</li>
+            </ul>
+          </div>
+
+          <div class="changelog-item">
             <div class="changelog-header">
               <span class="changelog-version">v2.9 正式版 (跨節點通訊備註修復)</span>
               <span class="changelog-date">2026-10-02</span>
@@ -1347,7 +1359,7 @@
             <ul class="changelog-list">
               <li><strong>移除 LocalStorage 快取</strong>：完全移除瀏覽器本地暫存，自動同步直接與本機或微軟 OneDrive 檔案實體對接，確保資料來源單一且安全。</li>
               <li><strong>全畫布自動同步保障</strong>：自動儲存範圍涵蓋專案內全部畫布分頁，分頁切換、編輯、新增、複製與刪除皆納入自動同步。</li>
-              <li><strong>版面精簡化</strong>：移除頂部「版本歷程」按鈕，改由點擊版號標籤（v2.9）直接喚起彈窗。</li>
+              <li><strong>版面精簡化</strong>：移除頂部「版本歷程」按鈕，改由點擊版號標籤（v2.9.1）直接喚起彈窗。</li>
             </ul>
           </div>
 
@@ -1484,6 +1496,16 @@ const PRESET_TEXT_COLORS = [
   { label: '自訂顏色...', val: 'custom' }
 ];
 
+const NOTE_COLOR_PRESETS = [
+  { label: '經典柔黃', fill: '#fffdf0', stroke: '#eab308', text: '#1e293b' },
+  { label: '簡約純白', fill: '#ffffff', stroke: '#94a3b8', text: '#1e293b' },
+  { label: '天空淡藍', fill: '#f0f9ff', stroke: '#0284c7', text: '#0369a1' },
+  { label: '薄荷淡綠', fill: '#f0fdf4', stroke: '#16a34a', text: '#15803d' },
+  { label: '珊瑚淡粉', fill: '#fff1f2', stroke: '#e11d48', text: '#9f1239' },
+  { label: '青蓮雅紫', fill: '#faf5ff', stroke: '#9333ea', text: '#6b21a8' },
+  { label: '高雅岩灰', fill: '#f8fafc', stroke: '#64748b', text: '#1e293b' }
+];
+
 const HIGHLIGHT_PRESETS = [
   { id: 'none', label: '無標記', fill: 'transparent', border: 'transparent' },
   { id: 'yellow', label: '柔光亮黃', fill: '#fef08a', border: '#eab308' },
@@ -1507,6 +1529,9 @@ function createEmptyCanvas(name) {
     state: {
       title: '',
       footerNote: '',
+      footerNoteFill: '#fffdf0',
+      footerNoteStroke: '#eab308',
+      footerNoteTextColor: '#1e293b',
       nodeGap: 200,
       stepGap: 100,
       nodes: [],
@@ -1532,7 +1557,7 @@ let currentFileHandle = null;
 let autoSaveTimer = null;
 let hasUnsavedChanges = false;
 
-// 離頁防護：全畫布資料更動確認
+// 離頁防護
 window.addEventListener('beforeunload', (e) => {
   if (hasUnsavedChanges || autoSaveTimer !== null) {
     if (currentFileHandle) {
@@ -1560,7 +1585,6 @@ function updateSyncStatusUI(status, fileName = '') {
   }
 }
 
-// 建構包含全部畫布的整體專案包裹
 function buildProjectDataPackage() {
   const exportCanvases = canvases.map(c => ({
     id: c.id,
@@ -1569,7 +1593,7 @@ function buildProjectDataPackage() {
   }));
 
   return {
-    version: '2.9',
+    version: '2.9.1',
     exportTime: new Date().toISOString(),
     designer: 'WeiHsun',
     activeCanvasId,
@@ -1577,7 +1601,6 @@ function buildProjectDataPackage() {
   };
 }
 
-// 刷新並收攏所有畫布的未決歷史紀錄
 function flushAllPendingHistories() {
   canvases.forEach(c => {
     if (c.historyDebounceTimer) {
@@ -1593,7 +1616,6 @@ function flushAllPendingHistories() {
   });
 }
 
-// 全畫布自動同步排程器
 async function scheduleAutoSave() {
   if (!currentFileHandle) return;
   if (autoSaveTimer) clearTimeout(autoSaveTimer);
@@ -1886,7 +1908,6 @@ document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
   });
 });
 
-// 版號標籤點擊開啟版本歷程
 $('#versionBadge').addEventListener('click', (e) => {
   e.stopPropagation();
   openModal('#changelogModal');
@@ -1973,9 +1994,10 @@ $('#rightSidebarToggleBtn').onclick = () => toggleRightSidebar();
 const measureCanvas = document.createElement('canvas');
 const measureCtx = measureCanvas.getContext('2d');
 
+/* ★ 統一測量字型為 600 12px (同 .t-label) */
 function calculateExactTextWidth(note) {
   if (!note) return 0;
-  measureCtx.font = '500 11.5px -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif';
+  measureCtx.font = "600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif";
   const lines = String(note).split('\n');
   let maxWidth = 0;
   for (const line of lines) {
@@ -1986,7 +2008,7 @@ function calculateExactTextWidth(note) {
 }
 
 function calculateNodeWidth(name) {
-  measureCtx.font = '700 12.5px -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif';
+  measureCtx.font = "600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif";
   const textW = measureCtx.measureText(name || '').width;
   return Math.max(116, Math.ceil(textW + 28));
 }
@@ -2048,7 +2070,7 @@ function renderCanvas(includeNotes = true, isExportMode = false) {
 
   let titleWidth = 0;
   if (state.title && state.title.trim()) {
-    measureCtx.font = '700 18px -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif';
+    measureCtx.font = "700 18px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif";
     titleWidth = measureCtx.measureText(state.title.trim()).width + 80;
   }
 
@@ -2090,7 +2112,6 @@ function renderCanvas(includeNotes = true, isExportMode = false) {
     footerExtraH = Math.max(48, footerLines.length * 18 + 28);
   }
 
-  // 第一筆通訊垂直起點擴增至 topPad + 75px，保留充足安全邊距
   let currentY = topPad + 75;
   const stepPositions = [];
 
@@ -2128,6 +2149,7 @@ function renderCanvas(includeNotes = true, isExportMode = false) {
   const coords = {};
   ns.forEach((n, idx) => coords[n.id] = actualLeftPad + idx * effectiveNodeGap);
 
+  /* ★ 全畫布字型樣式嚴格統一遵循 .t-label 格式 (600 12px 系統無襯線) */
   let svg = `
     <defs>
       <marker id="arrow" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
@@ -2139,18 +2161,16 @@ function renderCanvas(includeNotes = true, isExportMode = false) {
       <marker id="arrow-timeout" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
         <path d="M0 0L9 3.5L0 7z" fill="#ef4444"/>
       </marker>
-      <pattern id="yellowHatchPattern" width="7" height="7" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
-        <line x1="0" y1="0" x2="0" y2="7" stroke="#fde047" stroke-width="0.9" opacity="0.8" />
-      </pattern>
     </defs>
     <style>
-      .t-title { font: 700 18px -apple-system, BlinkMacSystemFont, 'Microsoft JhengHei', sans-serif; fill: #0f172a; }
-      .t-node { font: 700 12.5px -apple-system, BlinkMacSystemFont, 'Microsoft JhengHei', sans-serif; fill: #0f172a; }
-      .t-label { font: 600 12px -apple-system, BlinkMacSystemFont, 'Microsoft JhengHei', sans-serif; }
-      .t-api { font: 11.5px Consolas, Monaco, monospace; }
-      .t-timeout { font: 700 11.5px -apple-system, BlinkMacSystemFont, 'Microsoft JhengHei', sans-serif; fill: #ef4444 !important; }
-      .t-note { font: 11px -apple-system, BlinkMacSystemFont, 'Microsoft JhengHei', sans-serif; fill: #1e293b; font-weight: 500; }
-      .t-footer-note { font: 11.5px -apple-system, BlinkMacSystemFont, 'Microsoft JhengHei', sans-serif; fill: #1e293b; font-weight: 600; }
+      .t-title { font: 700 18px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif; fill: #0f172a; }
+      .t-node { font: 600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif; fill: #0f172a; }
+      .t-label { font: 600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif; }
+      .t-api { font: 600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif; }
+      .t-timeout { font: 600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif; fill: #ef4444 !important; }
+      .t-note { font: 600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif; }
+      .t-footer-note { font: 600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif; }
+      .t-span-note { font: 600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif; }
       .life-line { stroke: #94a3b8; stroke-dasharray: 4 4; stroke-width: 1.2; }
       .wire { stroke: #334155; stroke-width: 1.5; fill: none; }
       .wire-timeout { stroke: #ef4444 !important; stroke-dasharray: 4 3 !important; stroke-width: 1.5; }
@@ -2166,7 +2186,7 @@ function renderCanvas(includeNotes = true, isExportMode = false) {
 
   const lifelineBottom = baseHeight - 20;
 
-  // 繪製參與者節點 (自適應寬度)
+  // 繪製節點
   ns.forEach(n => {
     const x = coords[n.id];
     const isSelected = !isExportMode && currentSelection.type === 'node' && currentSelection.id === n.id;
@@ -2184,12 +2204,13 @@ function renderCanvas(includeNotes = true, isExportMode = false) {
     `;
   });
 
-  function buildNoteMarkup(text, side, targetY, x1, x2) {
+  // ★ 支援備註文字色彩、底色、外框自訂
+  function buildNoteMarkup(text, side, targetY, x1, x2, customOpts = {}) {
     if (!text || !includeNotes) return '';
     const nw = calculateExactTextWidth(text);
     const lines = text.split('\n');
-    const lineHeight = 16.5;
-    const paddingY = 13;
+    const lineHeight = 18;
+    const paddingY = 12;
     const nh = Math.max(34, paddingY * 2 + (lines.length - 1) * lineHeight);
     
     const nx = side === 'left' ? Math.max(10, Math.min(x1, x2) - nw - 16) : Math.min(totalWidth - nw - 10, Math.max(x1, x2) + 16);
@@ -2198,17 +2219,20 @@ function renderCanvas(includeNotes = true, isExportMode = false) {
     const startTextY = ny + (nh / 2) - ((lines.length - 1) * lineHeight / 2) + 4;
     const centerX = nx + (nw / 2);
 
+    const fill = sanitizeColor(customOpts.fill, '#fffdf0');
+    const stroke = sanitizeColor(customOpts.stroke, '#eab308');
+    const textColor = sanitizeColor(customOpts.textColor, '#1e293b');
+
     return `
-      <line x1="${side === 'left' ? nx + nw : nx}" y1="${targetY}" x2="${side === 'left' ? Math.min(x1, x2) - 4 : Math.max(x1, x2) + 4}" y2="${targetY}" stroke="#eab308" stroke-dasharray="3 3" stroke-width="1.2"/>
-      <rect x="${nx}" y="${ny}" width="${nw}" height="${nh}" rx="6" fill="#fffdf0"/>
-      <rect x="${nx}" y="${ny}" width="${nw}" height="${nh}" rx="6" fill="url(#yellowHatchPattern)"/>
+      <line x1="${side === 'left' ? nx + nw : nx}" y1="${targetY}" x2="${side === 'left' ? Math.min(x1, x2) - 4 : Math.max(x1, x2) + 4}" y2="${targetY}" stroke="${stroke}" stroke-dasharray="3 3" stroke-width="1.2"/>
+      <rect x="${nx}" y="${ny}" width="${nw}" height="${nh}" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="1.2"/>
       ${lines.map((l, i) => `
-        <text class="t-note" x="${centerX}" y="${startTextY + i * lineHeight}" text-anchor="middle">${esc(l)}</text>
+        <text class="t-note" x="${centerX}" y="${startTextY + i * lineHeight}" text-anchor="middle" fill="${textColor}">${esc(l)}</text>
       `).join('')}
     `;
   }
 
-  // 繪製步驟
+  // 繪製訊息流程
   ms.forEach((m, idx) => {
     const pos = stepPositions[idx];
     if (pos.skip) return;
@@ -2233,7 +2257,7 @@ function renderCanvas(includeNotes = true, isExportMode = false) {
         <g class="clickable" onclick="selectItem('message', '${m.id}'); event.stopPropagation();">
           ${isSelected ? `<rect x="${minX - 3}" y="${y - 3}" width="${boxW + 6}" height="${boxH + 6}" rx="6" fill="none" stroke="#2563eb" stroke-width="2.5" opacity="0.8"/>` : ''}
           <rect x="${minX}" y="${y}" width="${boxW}" height="${boxH}" rx="4" fill="${fill}" stroke="${stroke}" stroke-width="1.2"/>
-          <text class="t-span-note" x="${minX + boxW / 2}" y="${y + 18}" text-anchor="middle" dominant-baseline="middle" fill="${textColor}" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif" font-size="12" font-weight="700">${esc(m.spanTitle || '')}</text>
+          <text class="t-span-note" x="${minX + boxW / 2}" y="${y + 18}" text-anchor="middle" dominant-baseline="middle" fill="${textColor}">${esc(m.spanTitle || '')}</text>
         </g>
       `;
       return;
@@ -2268,25 +2292,25 @@ function renderCanvas(includeNotes = true, isExportMode = false) {
           <rect x="${minX}" y="${y}" width="${frameW}" height="${frameH}" rx="5" fill="rgba(243, 244, 246, 0.6)" stroke="#a855f7" stroke-width="1.5"/>
           <path d="M ${minX} ${y} L ${minX + 38} ${y} L ${minX + 46} ${y + 16} L ${minX} ${y + 16} Z" fill="#a855f7"/>
           <text x="${minX + 19}" y="${y + 12}" fill="#ffffff" font-size="10.5" font-weight="700" text-anchor="middle">alt</text>
-          <text x="${minX + 54}" y="${y + 13}" fill="#6b21a8" font-size="11" font-weight="700">${m.condition ? `[${esc(m.condition)}]` : ''}</text>
+          <text class="t-label" x="${minX + 54}" y="${y + 13}" fill="#6b21a8">${m.condition ? `[${esc(m.condition)}]` : ''}</text>
 
           <line x1="${sx1}" y1="${ifReqY}" x2="${sx2}" y2="${ifReqY}" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-active)"/>
-          <text x="${(sx1 + sx2) / 2}" y="${ifReqY - 6}" font-size="11" font-weight="600" fill="#1e40af" text-anchor="middle">${esc(ifReqText)}</text>
+          <text class="t-label" x="${(sx1 + sx2) / 2}" y="${ifReqY - 6}" fill="#1e40af" text-anchor="middle">${esc(ifReqText)}</text>
       `;
 
       if (hasReply) {
         svg += `
           <line x1="${sx2}" y1="${ifReplyY}" x2="${sx1}" y2="${ifReplyY}" stroke="#2563eb" stroke-dasharray="4 3" stroke-width="1.5" marker-end="url(#arrow-active)"/>
-          <text x="${(sx1 + sx2) / 2}" y="${ifReplyY - 6}" font-size="11" font-weight="600" fill="#2563eb" text-anchor="middle">${esc(ifRepText)}</text>
+          <text class="t-label" x="${(sx1 + sx2) / 2}" y="${ifReplyY - 6}" fill="#2563eb" text-anchor="middle">${esc(ifRepText)}</text>
         `;
       }
 
       svg += `
           <line x1="${minX}" y1="${dividerY}" x2="${minX + frameW}" y2="${dividerY}" stroke="#a855f7" stroke-dasharray="4 3" stroke-width="1.2"/>
-          <text x="${minX + 14}" y="${dividerY + 14}" fill="#6b21a8" font-size="10.5" font-weight="700" text-anchor="start">${esc(elseCond)}</text>
+          <text class="t-label" x="${minX + 14}" y="${dividerY + 14}" fill="#6b21a8" text-anchor="start">${esc(elseCond)}</text>
 
           <line x1="${sx2}" y1="${elseActY}" x2="${sx1}" y2="${elseActY}" stroke="${isElseError ? '#ef4444' : '#64748b'}" stroke-dasharray="4 3" stroke-width="1.5" marker-end="${isElseError ? 'url(#arrow-timeout)' : 'url(#arrow)'}"/>
-          <text x="${(sx1 + sx2) / 2}" y="${elseActY - 6}" font-size="11" font-weight="600" fill="${isElseError ? '#dc2626' : '#475569'}" text-anchor="middle">${esc(elseText)}</text>
+          <text class="t-label" x="${(sx1 + sx2) / 2}" y="${elseActY - 6}" fill="${isElseError ? '#dc2626' : '#475569'}" text-anchor="middle">${esc(elseText)}</text>
         </g>
       `;
       return;
@@ -2305,6 +2329,18 @@ function renderCanvas(includeNotes = true, isExportMode = false) {
 
     const reqTextColor = isCallTimeout ? '#ef4444' : sanitizeColor(m.textColor, '#1e293b');
     const reqHighlight = getHighlightConfig(m.highlight || 'none');
+
+    const reqNoteOpts = {
+      fill: m.reqNoteFill || '#fffdf0',
+      stroke: m.reqNoteStroke || '#eab308',
+      textColor: m.reqNoteTextColor || '#1e293b'
+    };
+
+    const resNoteOpts = {
+      fill: m.resNoteFill || '#fffdf0',
+      stroke: m.resNoteStroke || '#eab308',
+      textColor: m.resNoteTextColor || '#1e293b'
+    };
 
     svg += `<g class="clickable" onclick="selectItem('message', '${m.id}'); event.stopPropagation();">`;
 
@@ -2325,19 +2361,19 @@ function renderCanvas(includeNotes = true, isExportMode = false) {
       if (m.label) {
         const labelW = measureCtx.measureText(m.label).width + 8;
         if (reqHighlight.id !== 'none') {
-          svg += `<rect x="${x1 + loopWidth + 5}" y="${y - 1}" width="${labelW}" height="14" rx="3" fill="${reqHighlight.fill}" stroke="${reqHighlight.border}" stroke-width="0.8"/>`;
+          svg += `<rect x="${x1 + loopWidth + 5}" y="${y - 1}" width="${labelW}" height="15" rx="3" fill="${reqHighlight.fill}" stroke="${reqHighlight.border}" stroke-width="0.8"/>`;
         }
-        svg += `<text class="t-label" x="${x1 + loopWidth + 8}" y="${y + 10}" fill="${reqTextColor}" text-anchor="start">${esc(m.label)}</text>`;
+        svg += `<text class="t-label" x="${x1 + loopWidth + 8}" y="${y + 11}" fill="${reqTextColor}" text-anchor="start">${esc(m.label)}</text>`;
       }
 
       const apiW = measureCtx.measureText(m.name).width + 8;
       if (reqHighlight.id !== 'none' && !m.label) {
-        svg += `<rect x="${x1 + loopWidth + 5}" y="${y + 11}" width="${apiW}" height="14" rx="3" fill="${reqHighlight.fill}" stroke="${reqHighlight.border}" stroke-width="0.8"/>`;
+        svg += `<rect x="${x1 + loopWidth + 5}" y="${y + 12}" width="${apiW}" height="15" rx="3" fill="${reqHighlight.fill}" stroke="${reqHighlight.border}" stroke-width="0.8"/>`;
       }
-      svg += `<text class="t-api" x="${x1 + loopWidth + 8}" y="${y + 22}" fill="${reqTextColor}" text-anchor="start">${esc(m.name)}</text>`;
+      svg += `<text class="t-api" x="${x1 + loopWidth + 8}" y="${y + 24}" fill="${reqTextColor}" text-anchor="start">${esc(m.name)}</text>`;
 
       if (m.reqNote) {
-        svg += buildNoteMarkup(m.reqNote, m.reqNoteSide || 'left', y + loopHeight / 2, x1, x1 + loopWidth + 10);
+        svg += buildNoteMarkup(m.reqNote, m.reqNoteSide || 'left', y + loopHeight / 2, x1, x1 + loopWidth + 10, reqNoteOpts);
       }
     } 
     else if (m.type === 'reply_only') {
@@ -2367,12 +2403,12 @@ function renderCanvas(includeNotes = true, isExportMode = false) {
 
       const nameW = measureCtx.measureText(m.name).width + 10;
       if (reqHighlight.id !== 'none') {
-        svg += `<rect x="${mid - nameW / 2}" y="${y - 16}" width="${nameW}" height="14" rx="3" fill="${reqHighlight.fill}" stroke="${reqHighlight.border}" stroke-width="0.8"/>`;
+        svg += `<rect x="${mid - nameW / 2}" y="${y - 16}" width="${nameW}" height="15" rx="3" fill="${reqHighlight.fill}" stroke="${reqHighlight.border}" stroke-width="0.8"/>`;
       }
       svg += `<text class="${isCallTimeout ? 't-timeout' : 't-api'}" x="${mid}" y="${y - 5}" fill="${reqTextColor}" text-anchor="middle">${esc(m.name)}</text>`;
 
       if (m.reqNote) {
-        svg += buildNoteMarkup(m.reqNote, m.reqNoteSide || 'right', y, x1, x2);
+        svg += buildNoteMarkup(m.reqNote, m.reqNoteSide || 'right', y, x1, x2, reqNoteOpts);
       }
     } 
     else {
@@ -2402,13 +2438,12 @@ function renderCanvas(includeNotes = true, isExportMode = false) {
 
       const nameW = measureCtx.measureText(m.name).width + 10;
       if (reqHighlight.id !== 'none') {
-        svg += `<rect x="${mid - nameW / 2}" y="${y - 16}" width="${nameW}" height="14" rx="3" fill="${reqHighlight.fill}" stroke="${reqHighlight.border}" stroke-width="0.8"/>`;
+        svg += `<rect x="${mid - nameW / 2}" y="${y - 16}" width="${nameW}" height="15" rx="3" fill="${reqHighlight.fill}" stroke="${reqHighlight.border}" stroke-width="0.8"/>`;
       }
       svg += `<text class="${isCallTimeout ? 't-timeout' : 't-api'}" x="${mid}" y="${y - 5}" fill="${reqTextColor}" text-anchor="middle">${esc(m.name)}</text>`;
 
-      // ★ 繪製跨節點一般通訊連線的傳入備註
       if (m.reqNote) {
-        svg += buildNoteMarkup(m.reqNote, m.reqNoteSide || 'left', y, x1, x2);
+        svg += buildNoteMarkup(m.reqNote, m.reqNoteSide || 'left', y, x1, x2, reqNoteOpts);
       }
 
       if (m.reply) {
@@ -2430,14 +2465,13 @@ function renderCanvas(includeNotes = true, isExportMode = false) {
         if (hasReplyText) {
           if (m.replyHighlight && m.replyHighlight !== 'none') {
             const repW = measureCtx.measureText(m.replyName).width + 10;
-            svg += `<rect x="${mid - repW / 2}" y="${replyY - 17}" width="${repW}" height="14" rx="3" fill="#bae6fd" stroke="#38bdf8" stroke-width="0.8"/>`;
+            svg += `<rect x="${mid - repW / 2}" y="${replyY - 17}" width="${repW}" height="15" rx="3" fill="#bae6fd" stroke="#38bdf8" stroke-width="0.8"/>`;
           }
-          svg += `<text class="${isReplyTimeout ? 't-timeout' : 't-label'}" x="${mid}" y="${replyY - 6}" fill="${isReplyTimeout ? '#ef4444' : '#1e293b'}" text-anchor="middle">${esc(m.replyName)}</text>`;
+          svg += `<text class="${isReplyTimeout ? 't-timeout' : 't-label'}" x="${mid}" y="${replyY - 6}" fill="${isReplyTimeout ? '#ef4444' : sanitizeColor(m.replyTextColor, '#1e293b')}" text-anchor="middle">${esc(m.replyName)}</text>`;
         }
 
-        // ★ 繪製跨節點一般通訊連線的回傳備註
         if (m.resNote) {
-          svg += buildNoteMarkup(m.resNote, m.resNoteSide || 'right', replyY, x1, x2);
+          svg += buildNoteMarkup(m.resNote, m.resNoteSide || 'right', replyY, x1, x2, resNoteOpts);
         }
       }
     }
@@ -2454,12 +2488,15 @@ function renderCanvas(includeNotes = true, isExportMode = false) {
     const fnStartTextY = fnY + (fnHeight / 2) - ((footerLines.length - 1) * fnLineHeight / 2) + 4;
     const textLeftX = fnX + 22;
 
+    const fnFill = sanitizeColor(state.footerNoteFill, '#fffdf0');
+    const fnStroke = sanitizeColor(state.footerNoteStroke, '#eab308');
+    const fnTextCol = sanitizeColor(state.footerNoteTextColor, '#1e293b');
+
     svg += `
       <g class="clickable" onclick="selectItem('global'); event.stopPropagation();">
-        <rect x="${fnX}" y="${fnY}" width="${fnWidth}" height="${fnHeight}" rx="7" fill="#fffdf0" stroke="#eab308" stroke-width="1.2"/>
-        <rect x="${fnX}" y="${fnY}" width="${fnWidth}" height="${fnHeight}" rx="7" fill="url(#yellowHatchPattern)"/>
+        <rect x="${fnX}" y="${fnY}" width="${fnWidth}" height="${fnHeight}" rx="7" fill="${fnFill}" stroke="${fnStroke}" stroke-width="1.2"/>
         ${footerLines.map((l, i) => `
-          <text class="t-footer-note" x="${textLeftX}" y="${fnStartTextY + i * fnLineHeight}" text-anchor="start">${esc(l)}</text>
+          <text class="t-footer-note" x="${textLeftX}" y="${fnStartTextY + i * fnLineHeight}" text-anchor="start" fill="${fnTextCol}">${esc(l)}</text>
         `).join('')}
       </g>
     `;
@@ -2661,12 +2698,19 @@ function renderTrees() {
   });
 }
 
+function syncColorDropdown(selectEl, colorVal) {
+  if (!selectEl) return;
+  const normalized = (colorVal || '').toLowerCase();
+  const hasOption = Array.from(selectEl.options).some(o => o.value.toLowerCase() === normalized);
+  selectEl.value = hasOption ? normalized : 'custom';
+}
+
 function buildColorSelectOptions(currentColor) {
   let matched = false;
   let html = '';
   PRESET_TEXT_COLORS.forEach(c => {
     if (c.val === 'custom') return;
-    const isSel = (c.val.toLowerCase() === currentColor.toLowerCase());
+    const isSel = (c.val.toLowerCase() === (currentColor || '').toLowerCase());
     if (isSel) matched = true;
     html += `<option value="${c.val}" ${isSel ? 'selected' : ''}>${c.label}</option>`;
   });
@@ -2677,6 +2721,17 @@ function buildColorSelectOptions(currentColor) {
 function buildHighlightSelectOptions(currentHighlightId) {
   return HIGHLIGHT_PRESETS.map(h => `
     <option value="${h.id}" ${(h.id === currentHighlightId) ? 'selected' : ''}>${h.label}</option>
+  `).join('');
+}
+
+function buildNotePaletteHtml(prefix) {
+  return NOTE_COLOR_PRESETS.map(p => `
+    <div class="swatch" 
+         data-f="${p.fill}" 
+         data-s="${p.stroke}" 
+         data-t="${p.text}" 
+         style="background:${p.fill}; border-color:${p.stroke};" 
+         title="${p.label}"></div>
   `).join('');
 }
 
@@ -2692,6 +2747,10 @@ function renderInspector() {
     title.textContent = '全域設定';
     returnBtn.style.display = 'none';
 
+    const fnTextCol = sanitizeColor(state.footerNoteTextColor, '#1e293b');
+    const fnFill = sanitizeColor(state.footerNoteFill, '#fffdf0');
+    const fnStroke = sanitizeColor(state.footerNoteStroke, '#eab308');
+
     container.innerHTML = `
       <div class="field-group">
         <label>流程圖主標題名稱</label>
@@ -2701,6 +2760,36 @@ function renderInspector() {
         <label>底部整體備註 (選填 - 文字靠左排版)</label>
         <textarea id="inpFooterNote" placeholder="輸入整個流程圖的底部說明/總結（選填）">${esc(state.footerNote || '')}</textarea>
       </div>
+
+      <details class="foldable-panel" ${Boolean(state.footerNote && state.footerNote.trim()) ? 'open' : ''}>
+        <summary><span>🎨 底部備註外觀與顏色</span></summary>
+        <div class="foldable-content">
+          <div class="field-group">
+            <label>文字色彩</label>
+            <div style="display:flex; gap:4px; align-items:center;">
+              <select id="selFnTextColor" style="flex:1;">${buildColorSelectOptions(fnTextCol)}</select>
+              <input type="color" id="pickerFnTextColor" value="${fnTextCol}" style="width:34px; padding:2px; height:32px; cursor:pointer;" title="自訂顏色">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label>底色</label>
+              <input type="color" id="inpFnFill" value="${fnFill}">
+            </div>
+            <div class="field-group">
+              <label>邊框色彩</label>
+              <input type="color" id="inpFnStroke" value="${fnStroke}">
+            </div>
+          </div>
+          <div class="field-group">
+            <label>推薦備註主題色</label>
+            <div class="palette" id="fnPaletteBox">
+              ${buildNotePaletteHtml('fn')}
+            </div>
+          </div>
+        </div>
+      </details>
+
       <div class="field-row">
         <div class="field-group">
           <label>節點基本間隔 (px)</label>
@@ -2715,6 +2804,47 @@ function renderInspector() {
 
     $('#inpTitle').oninput = e => { beginDebouncedHistory(); state.title = e.target.value; debouncedRenderCanvas(); };
     $('#inpFooterNote').oninput = e => { beginDebouncedHistory(); state.footerNote = e.target.value; debouncedRenderCanvas(); };
+    
+    $('#selFnTextColor').onchange = e => {
+      pushHistoryDirect();
+      if (e.target.value === 'custom') $('#pickerFnTextColor').click();
+      else {
+        state.footerNoteTextColor = e.target.value;
+        $('#pickerFnTextColor').value = e.target.value;
+        renderCanvas();
+      }
+    };
+    $('#pickerFnTextColor').oninput = e => {
+      beginDebouncedHistory();
+      state.footerNoteTextColor = sanitizeColor(e.target.value);
+      syncColorDropdown($('#selFnTextColor'), state.footerNoteTextColor);
+      debouncedRenderCanvas();
+    };
+    $('#inpFnFill').oninput = e => {
+      beginDebouncedHistory();
+      state.footerNoteFill = sanitizeColor(e.target.value);
+      debouncedRenderCanvas();
+    };
+    $('#inpFnStroke').oninput = e => {
+      beginDebouncedHistory();
+      state.footerNoteStroke = sanitizeColor(e.target.value);
+      debouncedRenderCanvas();
+    };
+
+    $('#fnPaletteBox').onclick = e => {
+      const sw = e.target.closest('.swatch');
+      if (!sw) return;
+      pushHistoryDirect();
+      state.footerNoteFill = sw.dataset.f;
+      state.footerNoteStroke = sw.dataset.s;
+      state.footerNoteTextColor = sw.dataset.t;
+      $('#inpFnFill').value = state.footerNoteFill;
+      $('#inpFnStroke').value = state.footerNoteStroke;
+      $('#pickerFnTextColor').value = state.footerNoteTextColor;
+      syncColorDropdown($('#selFnTextColor'), state.footerNoteTextColor);
+      renderCanvas();
+    };
+
     $('#inpNodeGap').oninput = e => { beginDebouncedHistory(); state.nodeGap = Number(e.target.value) || 200; debouncedRenderCanvas(); };
     $('#inpStepGap').oninput = e => { beginDebouncedHistory(); state.stepGap = Number(e.target.value) || 100; debouncedRenderCanvas(); };
     return;
@@ -2934,7 +3064,7 @@ function renderInspector() {
       $('#pickerSpanTextColor').oninput = e => {
         beginDebouncedHistory();
         msg.textColor = sanitizeColor(e.target.value);
-        $('#selSpanTextColor').value = 'custom';
+        syncColorDropdown($('#selSpanTextColor'), msg.textColor);
         debouncedRenderCanvas();
       };
 
@@ -2948,6 +3078,7 @@ function renderInspector() {
         $('#inpSpanFill').value = msg.fill;
         $('#inpSpanStroke').value = msg.stroke;
         $('#pickerSpanTextColor').value = msg.textColor;
+        syncColorDropdown($('#selSpanTextColor'), msg.textColor);
         renderCanvas();
       };
       return;
@@ -2969,6 +3100,14 @@ function renderInspector() {
     const hasReqNote = Boolean(msg.reqNote && msg.reqNote.trim());
     const hasReplyColorOrHighlight = (msg.replyTextColor && msg.replyTextColor !== '#1e293b') || (msg.replyHighlight && msg.replyHighlight !== 'none');
     const hasResNote = Boolean(msg.resNote && msg.resNote.trim());
+
+    const curReqNoteFill = sanitizeColor(msg.reqNoteFill, '#fffdf0');
+    const curReqNoteStroke = sanitizeColor(msg.reqNoteStroke, '#eab308');
+    const curReqNoteText = sanitizeColor(msg.reqNoteTextColor, '#1e293b');
+
+    const curResNoteFill = sanitizeColor(msg.resNoteFill, '#fffdf0');
+    const curResNoteStroke = sanitizeColor(msg.resNoteStroke, '#eab308');
+    const curResNoteText = sanitizeColor(msg.resNoteTextColor, '#1e293b');
 
     title.textContent = panelTitle;
     container.innerHTML = `
@@ -3034,6 +3173,7 @@ function renderInspector() {
         </div>
       </details>
 
+      <!-- ★ 傳入線備註與色彩自訂 -->
       <details class="foldable-panel" ${hasReqNote ? 'open' : ''}>
         <summary><span>📝 ${isSelf ? '內部操作備註' : (isReplyOnly ? '回傳備註' : '傳入線備註')}</span></summary>
         <div class="foldable-content">
@@ -3046,6 +3186,32 @@ function renderInspector() {
               <option value="left" ${(msg.reqNoteSide || 'left') === 'left' ? 'selected' : ''}>靠左 (推薦)</option>
               <option value="right" ${(msg.reqNoteSide || 'left') === 'right' ? 'selected' : ''}>靠右</option>
             </select>
+          </div>
+
+          <div class="field-group" style="margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 6px;">
+            <label>備註文字色彩</label>
+            <div style="display:flex; gap:4px; align-items:center;">
+              <select id="selReqNoteTextColor" style="flex:1;">${buildColorSelectOptions(curReqNoteText)}</select>
+              <input type="color" id="pickerReqNoteTextColor" value="${curReqNoteText}" style="width:34px; padding:2px; height:32px; cursor:pointer;" title="自訂顏色">
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-group">
+              <label>備註底色</label>
+              <input type="color" id="inpReqNoteFill" value="${curReqNoteFill}">
+            </div>
+            <div class="field-group">
+              <label>邊框色彩</label>
+              <input type="color" id="inpReqNoteStroke" value="${curReqNoteStroke}">
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label>推薦備註主題色</label>
+            <div class="palette" id="reqNotePaletteBox">
+              ${buildNotePaletteHtml('req')}
+            </div>
           </div>
         </div>
       </details>
@@ -3082,6 +3248,7 @@ function renderInspector() {
           </div>
         </details>
 
+        <!-- ★ 回傳線備註與色彩自訂 -->
         <details class="foldable-panel" ${hasResNote ? 'open' : ''}>
           <summary><span>📝 回傳線備註說明</span></summary>
           <div class="foldable-content">
@@ -3094,6 +3261,32 @@ function renderInspector() {
                 <option value="right" ${msg.resNoteSide === 'right' ? 'selected' : ''}>靠右</option>
                 <option value="left" ${msg.resNoteSide === 'left' ? 'selected' : ''}>靠左</option>
               </select>
+            </div>
+
+            <div class="field-group" style="margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 6px;">
+              <label>備註文字色彩</label>
+              <div style="display:flex; gap:4px; align-items:center;">
+                <select id="selResNoteTextColor" style="flex:1;">${buildColorSelectOptions(curResNoteText)}</select>
+                <input type="color" id="pickerResNoteTextColor" value="${curResNoteText}" style="width:34px; padding:2px; height:32px; cursor:pointer;" title="自訂顏色">
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field-group">
+                <label>備註底色</label>
+                <input type="color" id="inpResNoteFill" value="${curResNoteFill}">
+              </div>
+              <div class="field-group">
+                <label>邊框色彩</label>
+                <input type="color" id="inpResNoteStroke" value="${curResNoteStroke}">
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label>推薦備註主題色</label>
+              <div class="palette" id="resNotePaletteBox">
+                ${buildNotePaletteHtml('res')}
+              </div>
             </div>
           </div>
         </details>
@@ -3116,7 +3309,12 @@ function renderInspector() {
       if (e.target.value === 'custom') $('#pickerReqTextColor').click();
       else { msg.textColor = e.target.value; $('#pickerReqTextColor').value = e.target.value; renderCanvas(); }
     };
-    $('#pickerReqTextColor').oninput = e => { beginDebouncedHistory(); msg.textColor = sanitizeColor(e.target.value); $('#selReqTextColor').value = 'custom'; debouncedRenderCanvas(); };
+    $('#pickerReqTextColor').oninput = e => { 
+      beginDebouncedHistory(); 
+      msg.textColor = sanitizeColor(e.target.value); 
+      syncColorDropdown($('#selReqTextColor'), msg.textColor); 
+      debouncedRenderCanvas(); 
+    };
     $('#selReqHighlight').onchange = e => { pushHistoryDirect(); msg.highlight = e.target.value; renderCanvas(); };
 
     $('#inpMsgType').onchange = e => {
@@ -3129,6 +3327,49 @@ function renderInspector() {
     };
 
     $('#inpMsgStatus').onchange = e => { pushHistoryDirect(); msg.status = e.target.value; renderCanvas(); renderTrees(); };
+
+    // 傳入線備註色彩與底紋事件綁定
+    $('#inpReqNote').oninput = e => { beginDebouncedHistory(); msg.reqNote = e.target.value; debouncedRenderCanvas(); };
+    $('#inpReqNoteSide').onchange = e => { pushHistoryDirect(); msg.reqNoteSide = e.target.value; debouncedRenderCanvas(); };
+
+    $('#selReqNoteTextColor').onchange = e => {
+      pushHistoryDirect();
+      if (e.target.value === 'custom') $('#pickerReqNoteTextColor').click();
+      else {
+        msg.reqNoteTextColor = e.target.value;
+        $('#pickerReqNoteTextColor').value = e.target.value;
+        renderCanvas();
+      }
+    };
+    $('#pickerReqNoteTextColor').oninput = e => {
+      beginDebouncedHistory();
+      msg.reqNoteTextColor = sanitizeColor(e.target.value);
+      syncColorDropdown($('#selReqNoteTextColor'), msg.reqNoteTextColor);
+      debouncedRenderCanvas();
+    };
+    $('#inpReqNoteFill').oninput = e => {
+      beginDebouncedHistory();
+      msg.reqNoteFill = sanitizeColor(e.target.value);
+      debouncedRenderCanvas();
+    };
+    $('#inpReqNoteStroke').oninput = e => {
+      beginDebouncedHistory();
+      msg.reqNoteStroke = sanitizeColor(e.target.value);
+      debouncedRenderCanvas();
+    };
+    $('#reqNotePaletteBox').onclick = e => {
+      const sw = e.target.closest('.swatch');
+      if (!sw) return;
+      pushHistoryDirect();
+      msg.reqNoteFill = sw.dataset.f;
+      msg.reqNoteStroke = sw.dataset.s;
+      msg.reqNoteTextColor = sw.dataset.t;
+      $('#inpReqNoteFill').value = msg.reqNoteFill;
+      $('#inpReqNoteStroke').value = msg.reqNoteStroke;
+      $('#pickerReqNoteTextColor').value = msg.reqNoteTextColor;
+      syncColorDropdown($('#selReqNoteTextColor'), msg.reqNoteTextColor);
+      renderCanvas();
+    };
 
     if (!isSelf && !isReplyOnly) {
       $('#inpMsgReply').onchange = e => {
@@ -3148,7 +3389,7 @@ function renderInspector() {
       $('#pickerReplyTextColor').oninput = e => {
         beginDebouncedHistory();
         msg.replyTextColor = sanitizeColor(e.target.value);
-        $('#selReplyTextColor').value = 'custom';
+        syncColorDropdown($('#selReplyTextColor'), msg.replyTextColor);
         debouncedRenderCanvas();
       };
 
@@ -3158,12 +3399,49 @@ function renderInspector() {
         renderCanvas();
       };
 
+      // 回傳線備註色彩與底紋事件綁定
       $('#inpResNote').oninput = e => { beginDebouncedHistory(); msg.resNote = e.target.value; debouncedRenderCanvas(); };
       $('#inpResNoteSide').onchange = e => { pushHistoryDirect(); msg.resNoteSide = e.target.value; debouncedRenderCanvas(); };
-    }
 
-    $('#inpReqNote').oninput = e => { beginDebouncedHistory(); msg.reqNote = e.target.value; debouncedRenderCanvas(); };
-    $('#inpReqNoteSide').onchange = e => { pushHistoryDirect(); msg.reqNoteSide = e.target.value; debouncedRenderCanvas(); };
+      $('#selResNoteTextColor').onchange = e => {
+        pushHistoryDirect();
+        if (e.target.value === 'custom') $('#pickerResNoteTextColor').click();
+        else {
+          msg.resNoteTextColor = e.target.value;
+          $('#pickerResNoteTextColor').value = e.target.value;
+          renderCanvas();
+        }
+      };
+      $('#pickerResNoteTextColor').oninput = e => {
+        beginDebouncedHistory();
+        msg.resNoteTextColor = sanitizeColor(e.target.value);
+        syncColorDropdown($('#selResNoteTextColor'), msg.resNoteTextColor);
+        debouncedRenderCanvas();
+      };
+      $('#inpResNoteFill').oninput = e => {
+        beginDebouncedHistory();
+        msg.resNoteFill = sanitizeColor(e.target.value);
+        debouncedRenderCanvas();
+      };
+      $('#inpResNoteStroke').oninput = e => {
+        beginDebouncedHistory();
+        msg.resNoteStroke = sanitizeColor(e.target.value);
+        debouncedRenderCanvas();
+      };
+      $('#resNotePaletteBox').onclick = e => {
+        const sw = e.target.closest('.swatch');
+        if (!sw) return;
+        pushHistoryDirect();
+        msg.resNoteFill = sw.dataset.f;
+        msg.resNoteStroke = sw.dataset.s;
+        msg.resNoteTextColor = sw.dataset.t;
+        $('#inpResNoteFill').value = msg.resNoteFill;
+        $('#inpResNoteStroke').value = msg.resNoteStroke;
+        $('#pickerResNoteTextColor').value = msg.resNoteTextColor;
+        syncColorDropdown($('#selResNoteTextColor'), msg.resNoteTextColor);
+        renderCanvas();
+      };
+    }
   }
 }
 
@@ -3194,7 +3472,6 @@ function moveNode(id, dir) {
   }
 }
 
-/* 僅於刪除節點時進行詢問確認（保護相依流程） */
 function deleteNode(id) {
   const state = getState();
   const targetNode = state.nodes.find(n => n.id === id);
@@ -3233,7 +3510,6 @@ function moveMsg(id, dir) {
   }
 }
 
-/* 流程項目直接刪除，不彈窗防打擾 */
 function deleteMsg(id) {
   const state = getState();
   pushHistoryDirect();
@@ -3307,8 +3583,14 @@ $('#addMsgFast').onclick = () => {
     replyStatus: 'normal',
     reqNote: '',
     reqNoteSide: 'left',
+    reqNoteFill: '#fffdf0',
+    reqNoteStroke: '#eab308',
+    reqNoteTextColor: '#1e293b',
     resNote: '',
-    resNoteSide: 'right'
+    resNoteSide: 'right',
+    resNoteFill: '#fffdf0',
+    resNoteStroke: '#eab308',
+    resNoteTextColor: '#1e293b'
   };
   state.messages.push(newMsg);
   selectItem('message', newMsg.id);
@@ -3340,8 +3622,14 @@ $('#addSelfActionFast').onclick = () => {
     replyName: '',
     reqNote: '',
     reqNoteSide: 'left',
+    reqNoteFill: '#fffdf0',
+    reqNoteStroke: '#eab308',
+    reqNoteTextColor: '#1e293b',
     resNote: '',
-    resNoteSide: 'right'
+    resNoteSide: 'right',
+    resNoteFill: '#fffdf0',
+    resNoteStroke: '#eab308',
+    resNoteTextColor: '#1e293b'
   };
   state.messages.push(newAction);
   selectItem('message', newAction.id);
@@ -3369,8 +3657,14 @@ $('#addReplyLineFast').onclick = () => {
     replyName: '',
     reqNote: '',
     reqNoteSide: 'right',
+    reqNoteFill: '#fffdf0',
+    reqNoteStroke: '#eab308',
+    reqNoteTextColor: '#1e293b',
     resNote: '',
-    resNoteSide: 'right'
+    resNoteSide: 'right',
+    resNoteFill: '#fffdf0',
+    resNoteStroke: '#eab308',
+    resNoteTextColor: '#1e293b'
   };
   state.messages.push(newReply);
   selectItem('message', newReply.id);
@@ -3426,6 +3720,9 @@ $('#newCanvasBtn').onclick = () => {
     getActiveCanvas().state = {
       title: '',
       footerNote: '',
+      footerNoteFill: '#fffdf0',
+      footerNoteStroke: '#eab308',
+      footerNoteTextColor: '#1e293b',
       nodeGap: 200,
       stepGap: 100,
       nodes: [],
@@ -3575,11 +3872,7 @@ function generateMermaidCode(includeNotes = true) {
   return lines.join('\n');
 }
 
-/* =========================================================================
-   時序圖轉換為業務流程圖 (Sequence to Flowchart Converter Engine)
-   ★ 兩行式排版：第一行節點通訊、第二行通訊內容
-   ========================================================================= */
-
+/* 業務流程圖轉換器引擎 (雙行結構) */
 function compileSequenceToFlowchart(includeReplies = false) {
   const state = getState();
   const nodeMap = new Map();
@@ -3685,12 +3978,12 @@ function renderFlowchartToSvg(includeReplies = false) {
       </marker>
     </defs>
     <style>
-      .fl-title { font: 800 16px -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; fill: #0f172a; text-anchor: middle; }
-      .fl-header { font: 700 11px -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; fill: #475569; text-anchor: middle; letter-spacing: 0.2px; }
-      .fl-header-err { font: 700 11px -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; fill: #b91c1c; text-anchor: middle; letter-spacing: 0.2px; }
-      .fl-content { font: 600 12.5px -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; fill: #0f172a; text-anchor: middle; }
-      .fl-content-err { font: 600 12.5px -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; fill: #dc2626; text-anchor: middle; }
-      .fl-text { font: 600 12px -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; fill: #1e293b; text-anchor: middle; }
+      .fl-title { font: 800 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif; fill: #0f172a; text-anchor: middle; }
+      .fl-header { font: 600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif; fill: #475569; text-anchor: middle; letter-spacing: 0.2px; }
+      .fl-header-err { font: 600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif; fill: #b91c1c; text-anchor: middle; letter-spacing: 0.2px; }
+      .fl-content { font: 600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif; fill: #0f172a; text-anchor: middle; }
+      .fl-content-err { font: 600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif; fill: #dc2626; text-anchor: middle; }
+      .fl-text { font: 600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif; fill: #1e293b; text-anchor: middle; }
       .fl-line { stroke: #3b82f6; stroke-width: 1.6; fill: none; }
       .fl-line-err { stroke: #ef4444; stroke-width: 1.6; stroke-dasharray: 4 3; fill: none; }
     </style>
@@ -3758,7 +4051,7 @@ function renderFlowchartToSvg(includeReplies = false) {
       const leftX = cx - 180;
       const rightX = cx + 180;
 
-      // 分支線 Left (符合 IF) - 雙行
+      // 符合 IF
       svg += `
         <path class="fl-line" d="M ${cx - diaW} ${midY} L ${leftX} ${midY} L ${leftX} ${branchY}" marker-end="url(#flowArrow)"/>
         <rect x="${(cx - diaW + leftX) / 2 - 25}" y="${midY - 14}" width="50" height="18" rx="3" fill="#ecfdf5" stroke="#10b981"/>
@@ -3768,7 +4061,7 @@ function renderFlowchartToSvg(includeReplies = false) {
         <text class="fl-content" x="${leftX}" y="${branchY + 38}" fill="#15803d">${esc(item.ifContent)}</text>
       `;
 
-      // 分支線 Right (不符 ELSE) - 雙行
+      // 不符 ELSE
       const isElseErr = item.elseStatus === 'timeout';
       svg += `
         <path class="${isElseErr ? 'fl-line-err' : 'fl-line'}" d="M ${cx + diaW} ${midY} L ${rightX} ${midY} L ${rightX} ${branchY}" marker-end="${isElseErr ? 'url(#flowArrowErr)' : 'url(#flowArrow)'}"/>
@@ -3779,7 +4072,7 @@ function renderFlowchartToSvg(includeReplies = false) {
         <text class="${isElseErr ? 'fl-content-err' : 'fl-content'}" x="${rightX}" y="${branchY + 38}">${esc(item.elseContent)}</text>
       `;
 
-      // 匯流至下一點
+      // 匯流
       const joinY = branchY + branchH + 25;
       svg += `
         <path class="fl-line" d="M ${leftX} ${branchY + branchH} L ${leftX} ${joinY} L ${cx - 6} ${joinY}"/>
@@ -3801,7 +4094,7 @@ function renderFlowchartToSvg(includeReplies = false) {
   const totalHeight = cy + 20;
   const dom = $('#flowchartSvg');
   dom.setAttribute('viewBox', `0 0 ${width} ${totalHeight}`);
-  dom.setAttribute('width', width); // 修正變數為 width
+  dom.setAttribute('width', width);
   dom.setAttribute('height', totalHeight);
   dom.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   dom.innerHTML = svg;
@@ -3862,18 +4155,14 @@ function updateFlowchartView() {
     : `已轉換 ${model.items.length} 個主要流程步驟（雙行結構排版：節點通訊 / 動作內容）`;
 }
 
-/* 流程圖彈窗事件綁定 */
 $('#openFlowchartModal').onclick = () => {
-  $('#chkFlowIncludeReplies').checked = false; // 預設不勾選回傳資訊
+  $('#chkFlowIncludeReplies').checked = false;
   updateFlowchartView();
   openModal('#flowchartModal');
 };
 
 $('#closeFlowchartModal').onclick = () => closeModal('#flowchartModal');
-
-$('#chkFlowIncludeReplies').onchange = () => {
-  updateFlowchartView();
-};
+$('#chkFlowIncludeReplies').onchange = () => updateFlowchartView();
 
 $('#tabFlowSvgBtn').onclick = () => {
   $('#tabFlowSvgBtn').classList.add('active');
@@ -4013,6 +4302,9 @@ function loadProjectData(data) {
       state: {
         title: typeof c.state?.title === 'string' ? c.state.title : '',
         footerNote: typeof c.state?.footerNote === 'string' ? c.state.footerNote : '',
+        footerNoteFill: c.state?.footerNoteFill || '#fffdf0',
+        footerNoteStroke: c.state?.footerNoteStroke || '#eab308',
+        footerNoteTextColor: c.state?.footerNoteTextColor || '#1e293b',
         nodeGap: Number(c.state?.nodeGap) || 200,
         stepGap: Number(c.state?.stepGap) || 100,
         nodes: Array.isArray(c.state?.nodes) ? c.state.nodes : [],
@@ -4033,6 +4325,9 @@ function loadProjectData(data) {
     loadedCanvas.state = {
       title: typeof data.state.title === 'string' ? data.state.title : '',
       footerNote: typeof data.state.footerNote === 'string' ? data.state.footerNote : '',
+      footerNoteFill: data.state?.footerNoteFill || '#fffdf0',
+      footerNoteStroke: data.state?.footerNoteStroke || '#eab308',
+      footerNoteTextColor: data.state?.footerNoteTextColor || '#1e293b',
       nodeGap: Number(data.state.nodeGap) || 200,
       stepGap: Number(data.state.stepGap) || 100,
       nodes: Array.isArray(data.state.nodes) ? data.state.nodes : [],
@@ -4084,7 +4379,7 @@ $('#saveAsProjectBtn').onclick = async () => {
   if ('showSaveFilePicker' in window) {
     try {
       const handle = await window.showSaveFilePicker({
-        suggestedName: 'sequence-diagram.json',
+        suggestedName: 'sequence-diagram-v2.9.1.json',
         types: [{
           description: 'JSON 專案檔',
           accept: { 'application/json': ['.json'] }
@@ -4107,7 +4402,7 @@ $('#saveAsProjectBtn').onclick = async () => {
 
   const dataPackage = buildProjectDataPackage();
   const jsonBlob = new Blob([JSON.stringify(dataPackage, null, 2)], { type: 'application/json;charset=utf-8' });
-  triggerDownload('sequence-project-v2.9.json', jsonBlob);
+  triggerDownload('sequence-project-v2.9.1.json', jsonBlob);
 };
 
 $('#projectFileInput').onchange = e => {
@@ -4274,8 +4569,14 @@ $('#applyMermaidBtn').onclick = () => {
           replyStatus: 'normal',
           reqNote: '',
           reqNoteSide: from === to ? 'left' : 'left',
+          reqNoteFill: '#fffdf0',
+          reqNoteStroke: '#eab308',
+          reqNoteTextColor: '#1e293b',
           resNote: '',
-          resNoteSide: 'right'
+          resNoteSide: 'right',
+          resNoteFill: '#fffdf0',
+          resNoteStroke: '#eab308',
+          resNoteTextColor: '#1e293b'
         });
       }
     }
