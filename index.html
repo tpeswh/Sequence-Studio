@@ -1,0 +1,4305 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>時序流程圖工作台 Sequence Studio</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --panel-bg: #1e293b;
+      --panel-surface: #0f172a;
+      --canvas-bg: #0b1120;
+      --border-subtle: #334155;
+      --border-bright: #475569;
+      --text-main: #f8fafc;
+      --text-sub: #cbd5e1;
+      --text-dim: #94a3b8;
+      --danger: #ef4444;
+      --radius: 6px;
+
+      --left-width: 320px;
+      --right-width: 330px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif;
+      background: var(--canvas-bg);
+      color: var(--text-main);
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      font-size: 13.5px;
+    }
+
+    /* 全螢幕沉浸模式 */
+    body.zen-mode header,
+    body.zen-mode .bottom-sheet-bar {
+      display: none !important;
+    }
+    body.zen-mode .studio-workspace {
+      height: 100vh !important;
+    }
+    body.zen-mode .pane-tree {
+      width: 0 !important;
+      min-width: 0 !important;
+      border-right: none !important;
+      overflow: hidden !important;
+    }
+    body.zen-mode .pane-inspector {
+      width: 0 !important;
+      min-width: 0 !important;
+      border-left: none !important;
+      overflow: hidden !important;
+    }
+
+    header {
+      height: 52px;
+      background: var(--panel-surface);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 20;
+      flex-shrink: 0;
+      gap: 8px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .brand h1 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+    .badge {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(37, 99, 235, 0.2);
+      color: #93c5fd;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .version-tag {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #6ee7b7;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      font-weight: 700;
+      white-space: nowrap;
+      user-select: none;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .version-tag:hover {
+      background: rgba(16, 185, 129, 0.3);
+      border-color: #10b981;
+      color: #fff;
+    }
+    .designer-tag {
+      font-size: 11.5px;
+      color: #94a3b8;
+      font-weight: 500;
+      border-left: 1px solid var(--border-subtle);
+      padding-left: 8px;
+      white-space: nowrap;
+    }
+
+    /* 自動同步狀態指示器 */
+    .sync-status-badge {
+      font-size: 11.5px;
+      color: var(--text-dim);
+      background: rgba(255, 255, 255, 0.04);
+      padding: 3px 10px;
+      border-radius: 4px;
+      border: 1px solid var(--border-subtle);
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      max-width: 280px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      user-select: none;
+      transition: all 0.2s ease;
+    }
+    .sync-status-badge.synced {
+      color: #6ee7b7;
+      border-color: rgba(16, 185, 129, 0.35);
+      background: rgba(16, 185, 129, 0.08);
+    }
+    .sync-status-badge.saving {
+      color: #93c5fd;
+      border-color: rgba(37, 99, 235, 0.35);
+      background: rgba(37, 99, 235, 0.08);
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: nowrap;
+    }
+
+    .btn {
+      height: 32px;
+      padding: 0 11px;
+      border-radius: var(--radius);
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border-subtle);
+      background: var(--panel-bg);
+      color: var(--text-main);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+    .btn:hover:not(:disabled) {
+      background: #334155;
+      border-color: var(--border-bright);
+    }
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .btn.primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .btn.primary:hover:not(:disabled) {
+      background: var(--primary-hover);
+    }
+    .btn.accent {
+      background: #0f766e;
+      border-color: #14b8a6;
+      color: #ccfbf1;
+    }
+    .btn.accent:hover:not(:disabled) {
+      background: #115e59;
+      color: #fff;
+    }
+    .btn.purple {
+      background: #6b21a8;
+      border-color: #a855f7;
+      color: #f3e8ff;
+    }
+    .btn.purple:hover:not(:disabled) {
+      background: #7e22ce;
+      color: #fff;
+    }
+    .btn.danger {
+      background: transparent;
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+    .btn.danger:hover:not(:disabled) {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .divider-v {
+      width: 1px;
+      height: 20px;
+      background: var(--border-subtle);
+      margin: 0 2px;
+      flex-shrink: 0;
+    }
+
+    .studio-workspace {
+      flex: 1;
+      display: flex;
+      height: calc(100vh - 86px);
+      position: relative;
+      overflow: hidden;
+      transition: height 0.2s ease;
+    }
+
+    /* 左側架構導覽 */
+    .pane-tree {
+      width: var(--left-width);
+      min-width: var(--left-width);
+      max-width: var(--left-width);
+      background: var(--panel-surface);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
+      transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .pane-title-bar {
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      background: #111c33;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+    .pane-main-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-main);
+      white-space: nowrap;
+    }
+
+    .tree-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .tree-section-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .tree-section-top {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .section-title {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #93c5fd;
+      white-space: nowrap;
+    }
+
+    .flow-actions-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .btn-row-layer1 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+    }
+    .btn-row-layer2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 5px;
+    }
+
+    .section-btn-grid.single {
+      display: grid;
+      grid-template-columns: 1fr;
+    }
+
+    .tree-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .tree-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      border-radius: 5px;
+      font-size: 12.5px;
+      cursor: grab;
+      border: 1px solid transparent;
+      background: var(--panel-bg);
+      transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+      user-select: none;
+    }
+    .tree-item:active { cursor: grabbing; }
+    .tree-item:hover { background: #28374d; }
+    .tree-item.active {
+      background: rgba(37, 99, 235, 0.25);
+      border-color: rgba(37, 99, 235, 0.6);
+      color: #93c5fd;
+      font-weight: 600;
+    }
+    .tree-item.dragging {
+      opacity: 0.35;
+      border: 1px dashed var(--primary);
+    }
+    .tree-item.drag-over-up { border-top: 2px solid var(--primary); }
+    .tree-item.drag-over-down { border-bottom: 2px solid var(--primary); }
+
+    .drag-handle {
+      color: var(--text-dim);
+      font-size: 12px;
+      cursor: grab;
+      padding: 0 2px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+    }
+
+    .tree-item .name {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .item-color-tag {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+    .tree-ops {
+      display: flex;
+      gap: 3px;
+      flex-shrink: 0;
+    }
+    .tree-btn {
+      background: #1e293b;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-sub);
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 4px;
+      font-size: 11.5px;
+      font-weight: 600;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+    .tree-btn:hover {
+      background: var(--border-bright);
+      color: #fff;
+    }
+    .tree-btn.primary {
+      background: rgba(37, 99, 235, 0.2);
+      border-color: rgba(37, 99, 235, 0.5);
+      color: #93c5fd;
+    }
+    .tree-btn.primary:hover {
+      background: var(--primary);
+      color: #fff;
+    }
+    .tree-btn.span-btn {
+      background: rgba(234, 179, 8, 0.15);
+      border-color: rgba(234, 179, 8, 0.4);
+      color: #fef08a;
+    }
+    .tree-btn.span-btn:hover {
+      background: #ca8a04;
+      color: #fff;
+    }
+    .tree-btn.alt-btn {
+      background: rgba(168, 85, 247, 0.15);
+      border-color: rgba(168, 85, 247, 0.4);
+      color: #d8b4fe;
+    }
+    .tree-btn.alt-btn:hover {
+      background: #9333ea;
+      color: #fff;
+    }
+
+    /* 中間畫布區 */
+    .pane-canvas {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background-image: radial-gradient(circle at 1px 1px, #1e293b 1px, transparent 0);
+      background-size: 20px 20px;
+      cursor: default;
+      min-width: 0;
+    }
+
+    .canvas-top-controls {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 15;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 3px 5px;
+      backdrop-filter: blur(6px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+    }
+    .icon-ctrl-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: #cbd5e1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      padding: 0;
+    }
+    .icon-ctrl-btn:hover {
+      background: #334155;
+      color: #fff;
+      border-color: var(--border-bright);
+    }
+    .icon-ctrl-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+    .icon-ctrl-btn.active {
+      color: #60a5fa;
+      background: rgba(37, 99, 235, 0.2);
+    }
+
+    .canvas-scroll-container {
+      flex: 1;
+      overflow: auto;
+      display: flex;
+      padding: 50px;
+    }
+
+    .artboard {
+      margin: auto;
+      transform-origin: center center;
+      transition: transform 0.08s ease-out;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+      background: #ffffff;
+      border-radius: 4px;
+    }
+
+    .canvas-hud {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.94);
+      border: 1px solid var(--border-subtle);
+      border-radius: 24px;
+      padding: 4px 12px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      z-index: 10;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(8px);
+    }
+    .canvas-hud span.zoom-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-sub);
+      min-width: 44px;
+      text-align: center;
+    }
+    .quick-zoom-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      color: #cbd5e1;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .quick-zoom-btn:hover {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    #zoomSlider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 90px;
+      height: 4px;
+      background: #334155;
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+      margin: 0 2px;
+      padding: 0;
+    }
+    #zoomSlider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #3b82f6;
+      border: 2px solid #ffffff;
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+      transition: transform 0.1s;
+    }
+    #zoomSlider::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      background: #2563eb;
+    }
+    #zoomSlider::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #3b82f6;
+      border: 2px solid #ffffff;
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    }
+
+    /* 右側屬性檢查器 */
+    .pane-inspector {
+      width: var(--right-width);
+      min-width: var(--right-width);
+      max-width: var(--right-width);
+      background: var(--panel-surface);
+      border-left: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      flex-shrink: 0;
+      transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .pane-inspector.collapsed {
+      width: 0 !important;
+      min-width: 0 !important;
+      border-left: none !important;
+      overflow: hidden !important;
+    }
+
+    .inspector-body {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    label {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-dim);
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+
+    input, select, textarea {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 7px 10px;
+      border-radius: 5px;
+      font-family: inherit;
+      font-size: 13px;
+      width: 100%;
+      outline: none;
+      transition: border 0.15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--primary);
+    }
+    textarea {
+      resize: vertical;
+      min-height: 48px;
+      font-size: 12.5px;
+    }
+
+    details.foldable-panel {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      overflow: hidden;
+      transition: border-color 0.15s;
+    }
+    details.foldable-panel[open] {
+      border-color: rgba(59, 130, 246, 0.4);
+      background: rgba(255, 255, 255, 0.03);
+    }
+    details.foldable-panel summary {
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #93c5fd;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      outline: none;
+      list-style: none;
+      background: rgba(255, 255, 255, 0.01);
+    }
+    details.foldable-panel summary::-webkit-details-marker {
+      display: none;
+    }
+    details.foldable-panel summary::after {
+      content: '▾';
+      font-size: 11px;
+      color: var(--text-dim);
+      transition: transform 0.15s;
+    }
+    details.foldable-panel:not([open]) summary::after {
+      transform: rotate(-90deg);
+    }
+    .foldable-content {
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .palette {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+    .swatch {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      border: 2px solid #fff;
+      cursor: pointer;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.3);
+      transition: transform 0.1s;
+    }
+    .swatch:hover { transform: scale(1.15); }
+
+    /* 底部工作表分頁列 */
+    .bottom-sheet-bar {
+      height: 34px;
+      background: #090d16;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      gap: 4px;
+      z-index: 20;
+      flex-shrink: 0;
+    }
+    .sheet-icon-btn {
+      width: 26px;
+      height: 26px;
+      border-radius: 4px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-sub);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: 700;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .sheet-icon-btn:hover {
+      background: #1e293b;
+      color: #fff;
+      border-color: var(--border-bright);
+    }
+    .sheets-scroll-container {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      flex: 1;
+      overflow-x: auto;
+      height: 100%;
+    }
+    .sheet-tab {
+      height: 28px;
+      padding: 0 10px;
+      border-radius: 4px 4px 0 0;
+      background: #131d31;
+      border: 1px solid var(--border-subtle);
+      border-bottom: none;
+      color: var(--text-dim);
+      font-size: 12px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .sheet-tab:hover {
+      background: #1e293b;
+      color: #cbd5e1;
+    }
+    .sheet-tab.active {
+      background: #2563eb;
+      border-color: #2563eb;
+      color: #ffffff;
+      font-weight: 700;
+    }
+    .sheet-dropdown-trigger {
+      font-size: 10px;
+      opacity: 0.75;
+      padding: 2px;
+      border-radius: 3px;
+    }
+    .sheet-dropdown-trigger:hover {
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .sheet-menu {
+      position: fixed;
+      background: #0f172a;
+      border: 1px solid var(--border-bright);
+      border-radius: 6px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
+      padding: 4px 0;
+      z-index: 100;
+      min-width: 140px;
+      display: flex;
+      flex-direction: column;
+    }
+    .sheet-menu[hidden] { display: none; }
+    .sheet-menu-item {
+      padding: 7px 12px;
+      font-size: 12px;
+      color: var(--text-main);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .sheet-menu-item:hover {
+      background: #1e293b;
+      color: #60a5fa;
+    }
+    .sheet-menu-item.danger:hover {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+    }
+
+    /* Modal 對話框 */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999 !important;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .modal-backdrop[hidden] { display: none !important; }
+    .modal-window {
+      width: 560px;
+      max-width: 95vw;
+      max-height: 88vh;
+      background: var(--panel-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.7);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .modal-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .modal-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* 版本歷程專屬自適應流暢滾動容器 */
+    .changelog-scroll-wrapper {
+      flex: 1;
+      min-height: 0;
+      max-height: 100%;
+      overflow-y: auto !important;
+      overscroll-behavior: contain;
+      padding-right: 8px;
+    }
+    .changelog-timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 4px 6px;
+    }
+    .changelog-item {
+      position: relative;
+      padding-left: 20px;
+      border-left: 2px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .changelog-item::before {
+      content: '';
+      position: absolute;
+      left: -6px;
+      top: 3px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: 2px solid var(--panel-surface);
+    }
+    .changelog-item.current::before {
+      background: #10b981;
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+    }
+    .changelog-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .changelog-version {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #93c5fd;
+    }
+    .changelog-item.current .changelog-version {
+      color: #6ee7b7;
+    }
+    .changelog-date {
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    .changelog-list {
+      list-style: disc;
+      padding-left: 18px;
+      color: var(--text-sub);
+      font-size: 12.5px;
+      line-height: 1.6;
+    }
+
+    .changelog-scroll-wrapper::-webkit-scrollbar {
+      width: 8px;
+    }
+    .changelog-scroll-wrapper::-webkit-scrollbar-track {
+      background: #0f172a;
+      border-radius: 4px;
+    }
+    .changelog-scroll-wrapper::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    .changelog-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+
+    /* 流程圖預覽專屬樣式 */
+    .flowchart-modal-window {
+      width: min(960px, 95vw);
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .flowchart-view-toggle {
+      display: flex;
+      gap: 6px;
+      background: #0b1120;
+      padding: 3px;
+      border-radius: 6px;
+      border: 1px solid var(--border-subtle);
+      width: fit-content;
+    }
+    .flowchart-tab-btn {
+      padding: 4px 12px;
+      border-radius: 4px;
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .flowchart-tab-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+    }
+    .flowchart-content-area {
+      flex: 1;
+      overflow: auto;
+      max-height: calc(85vh - 130px);
+      background: #0b1120;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      display: flex;
+      align-items: flex-start; /* 讓長流程圖從上方依序滾動檢視 */
+      justify-content: center;
+      padding: 20px;
+    }
+    .flowchart-artboard {
+      margin: auto;
+      background: #ffffff;
+      border-radius: 6px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+
+    .opt-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .checkbox-opt {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-main);
+      cursor: pointer;
+      user-select: none;
+    }
+    .checkbox-opt input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: var(--primary);
+    }
+
+    .toast {
+      position: fixed;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-10px);
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--border-bright);
+      color: #fff;
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 12.5px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.2s ease;
+      z-index: 10000;
+    }
+    .toast.active {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .clickable { cursor: pointer; }
+    .clickable:hover { opacity: 0.9; }
+
+    .t-span-note {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    @media (max-width: 1280px) {
+      :root {
+        --left-width: 290px;
+        --right-width: 290px;
+      }
+      .brand h1 { font-size: 14px; }
+      .designer-tag { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>通訊時序流程圖產生器</h1>
+    <span class="badge">PRO</span>
+    <span class="version-tag" id="versionBadge" title="點擊檢視完整版本演進歷程">v2.9</span>
+    <span class="designer-tag">Designed by WeiHsun</span>
+  </div>
+
+  <div class="sync-status-badge" id="syncStatusBadge" title="本機 / OneDrive 自動同步狀態">
+    ☁️ 離線模式 (未連結檔案)
+  </div>
+
+  <div class="top-actions">
+    <button class="btn" id="undoBtn" title="復原 (Ctrl+Z)" disabled>↩ 返回</button>
+    <button class="btn" id="redoBtn" title="重做 (Ctrl+Y)" disabled>↪ 恢復</button>
+    
+    <div class="divider-v"></div>
+
+    <button class="btn" id="newCanvasBtn">重設目前畫布</button>
+    <button class="btn accent" id="openProjectBtn" title="開啟專案檔 (支援本機/OneDrive即時雙向自動存檔)">📂 開啟專案</button>
+    <button class="btn" id="saveAsProjectBtn" title="另存為新檔案並啟動即時自動儲存">💾 另存同步檔</button>
+    <input type="file" id="projectFileInput" accept=".json" style="display: none;">
+    
+    <div class="divider-v"></div>
+
+    <button class="btn purple" id="openFlowchartModal" title="將目前時序圖結構自動轉換為兩行結構流程圖 (Flowchart)">🔀 轉為流程圖</button>
+    <button class="btn" id="openMermaidModal">匯入 Mermaid</button>
+    <button class="btn primary" id="openSaveExportModal">匯出...</button>
+  </div>
+</header>
+
+<div class="studio-workspace" id="workspaceContainer">
+  <!-- 左側架構導覽 -->
+  <aside class="pane-tree" id="leftPane">
+    <div class="pane-title-bar">
+      <span class="pane-main-title">架構導覽</span>
+      <button class="tree-btn" id="navGlobalSettingsBtn" title="修改畫布全域標題、底部備註與間隔">⚙ 全域設定</button>
+    </div>
+    <div class="tree-scroll">
+      <div class="tree-section-card">
+        <div class="tree-section-top">
+          <span class="section-title">參與者節點 (NODES)</span>
+          <div class="section-btn-grid single">
+            <button class="tree-btn primary" id="addNodeFast">+ 新增節點</button>
+          </div>
+        </div>
+        <div class="tree-list" id="nodeTreeList"></div>
+      </div>
+
+      <div class="tree-section-card">
+        <div class="tree-section-top">
+          <span class="section-title">時序與操作歷程 (FLOW)</span>
+          <div class="flow-actions-wrapper">
+            <div class="btn-row-layer1">
+              <button class="tree-btn primary" id="addMsgFast" title="新增跨節點通訊">+ 通訊連線</button>
+              <button class="tree-btn primary" id="addSelfActionFast" title="新增同節點內部操作">+ 內部操作</button>
+              <button class="tree-btn primary" id="addReplyLineFast" title="新增延遲/獨立回傳線">+ 獨立回傳</button>
+            </div>
+            <div class="btn-row-layer2">
+              <button class="tree-btn span-btn" id="addSpanNoteFast" title="新增獨立的工作階段說明方塊 (Note Over)">+ 區間說明</button>
+              <button class="tree-btn alt-btn" id="addAltFast" title="新增 IF / ELSE 條件分支 (Alt 框架)">+ 條件判斷 (Alt)</button>
+            </div>
+          </div>
+        </div>
+        <div class="tree-list" id="msgTreeList"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 中間畫布區 -->
+  <main class="pane-canvas" id="canvasPane">
+    <div class="canvas-top-controls">
+      <button class="icon-ctrl-btn" id="fullscreenToggleBtn" title="全螢幕模式 (自動收折兩側工作列)">
+        <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+      </button>
+      <button class="icon-ctrl-btn" id="rightSidebarToggleBtn" title="縮合 / 展開右側屬性面板">
+        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 16H5V5h9v14zm2 0V5h3v14h-3zm-6-7l-4-4v8l4-4z"/></svg>
+      </button>
+    </div>
+
+    <div class="canvas-scroll-container">
+      <div class="artboard" id="artboard">
+        <svg id="diagramSvg"></svg>
+      </div>
+    </div>
+    
+    <div class="canvas-hud">
+      <button class="tree-btn" id="zoomOut" style="font-size: 13px; font-weight: bold; padding: 2px 7px;">-</button>
+      <input type="range" id="zoomSlider" min="50" max="250" value="100">
+      <button class="tree-btn" id="zoomIn" style="font-size: 13px; font-weight: bold; padding: 2px 7px;">+</button>
+      <span class="zoom-label" id="zoomPercent">100%</span>
+      <div class="divider-v" style="height: 14px; margin: 0 2px;"></div>
+      <button class="quick-zoom-btn" onclick="setZoom(1.0)">100%</button>
+      <button class="quick-zoom-btn" onclick="setZoom(1.5)">150%</button>
+      <button class="quick-zoom-btn" onclick="setZoom(2.0)">200%</button>
+    </div>
+  </main>
+
+  <!-- 右側屬性檢查器 -->
+  <aside class="pane-inspector" id="rightPane">
+    <div class="pane-title-bar">
+      <span class="pane-main-title" id="inspectorTitle">屬性檢查器</span>
+      <button class="tree-btn" id="inspectorGlobalBtn" style="display:none;" onclick="selectItem('global')">全域</button>
+    </div>
+    <div class="inspector-body" id="inspectorContent"></div>
+  </aside>
+</div>
+
+<!-- 底部工作表分頁列 -->
+<footer class="bottom-sheet-bar">
+  <button class="sheet-icon-btn" id="addSheetBtn" title="新增畫布分頁">＋</button>
+  <div class="divider-v" style="height: 18px;"></div>
+  <div class="sheets-scroll-container" id="sheetsContainer"></div>
+</footer>
+
+<!-- 畫布分頁下拉選單 -->
+<div class="sheet-menu" id="sheetDropdownMenu" hidden>
+  <div class="sheet-menu-item" id="menuRenameSheet">✏️ 重新命名</div>
+  <div class="sheet-menu-item" id="menuDuplicateSheet">📋 複製畫布</div>
+  <div class="sheet-menu-item danger" id="menuDeleteSheet">✕ 刪除畫布</div>
+</div>
+
+<!-- 流程圖轉換檢視彈窗 -->
+<div class="modal-backdrop" id="flowchartModal" hidden>
+  <div class="modal-window flowchart-modal-window">
+    <div class="modal-header">
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <span>🔀 時序圖 ➔ 流程圖轉換器</span>
+        <div class="flowchart-view-toggle">
+          <button class="flowchart-tab-btn active" id="tabFlowSvgBtn">向量預覽 (SVG)</button>
+          <button class="flowchart-tab-btn" id="tabFlowMmdBtn">Mermaid 語法</button>
+        </div>
+        <label class="checkbox-opt" style="font-size: 12px; color: var(--text-sub); cursor: pointer; user-select: none;">
+          <input type="checkbox" id="chkFlowIncludeReplies">
+          <span style="font-weight: 600;">包含回傳資訊</span>
+        </label>
+      </div>
+      <button class="tree-btn" id="closeFlowchartModal">✕</button>
+    </div>
+    <div class="modal-body" style="gap: 10px;">
+      <div class="flowchart-content-area" id="flowchartSvgContainer">
+        <div class="flowchart-artboard">
+          <svg id="flowchartSvg"></svg>
+        </div>
+      </div>
+      <div class="flowchart-content-area" id="flowchartMmdContainer" style="display: none; padding: 0;">
+        <textarea id="flowchartMmdText" readonly style="width: 100%; height: 100%; font-family: Consolas, Monaco, monospace; font-size: 12.5px; border: none; background: transparent; color: #cbd5e1; padding: 16px; outline: none;"></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 4px; flex-wrap: wrap; gap: 8px;">
+        <div style="font-size: 12px; color: var(--text-dim);" id="flowchartSummaryLabel">
+          已轉換主要流程步驟（雙行結構排版）
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn" id="copyFlowchartMmdBtn">📋 複製 Mermaid 語法</button>
+          <button class="btn" id="downloadFlowchartSvgBtn">匯出 SVG 向量圖</button>
+          <button class="btn primary" id="downloadFlowchartPngBtn">匯出 PNG 圖檔</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mermaid 匯入彈窗 -->
+<div class="modal-backdrop" id="mermaidModal" hidden>
+  <div class="modal-window">
+    <div class="modal-header">
+      <span>匯入 Mermaid 語法 (匯入至當前畫布)</span>
+      <button class="tree-btn" id="closeMermaidModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <textarea id="mermaidInput" placeholder="請貼上 sequenceDiagram 內容..." style="height: 240px; font-family: Consolas, monospace; font-size: 12.5px;"></textarea>
+      <div style="display:flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn" id="cancelMermaidBtn">取消</button>
+        <button class="btn primary" id="applyMermaidBtn">解析並載入</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 匯出彈窗 -->
+<div class="modal-backdrop" id="saveExportModal" hidden>
+  <div class="modal-window" style="width: 440px;">
+    <div class="modal-header">
+      <span>匯出流程圖圖檔與代碼</span>
+      <button class="tree-btn" id="closeSaveExportModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="opt-box">
+        <label style="font-size:11px; color:var(--text-dim); text-transform:uppercase;">內容設定</label>
+        <label class="checkbox-opt">
+          <input type="checkbox" id="chkIncludeNotes" checked>
+          <span style="font-weight: 600;">包含備註內容 (含區間說明與底部備註)</span>
+        </label>
+      </div>
+
+      <div class="opt-box">
+        <label style="font-size:11px; color:var(--text-dim); text-transform:uppercase;">選擇匯出格式</label>
+        <label class="checkbox-opt">
+          <input type="checkbox" id="chkExportPng" checked>
+          <span>PNG 高畫質圖檔 (.png) - 當前分頁</span>
+        </label>
+        <label class="checkbox-opt">
+          <input type="checkbox" id="chkExportSvg">
+          <span>SVG 向量圖檔 (.svg) - 當前分頁</span>
+        </label>
+        <label class="checkbox-opt">
+          <input type="checkbox" id="chkExportMermaid">
+          <span>Mermaid 語法檔 (.mmd) - 當前分頁</span>
+        </label>
+      </div>
+
+      <div style="display:flex; justify-content: flex-end; gap: 8px; margin-top: 4px;">
+        <button class="btn" id="cancelSaveExportBtn">取消</button>
+        <button class="btn primary" id="confirmSaveExportBtn">確認匯出</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 版本歷程彈窗 (完整回溯 1.0 至最新版，支援獨立滑順捲動) -->
+<div class="modal-backdrop" id="changelogModal" hidden>
+  <div class="modal-window" style="width: 620px;">
+    <div class="modal-header">
+      <span style="display:flex; align-items:center; gap:8px;">
+        <span>🕒 版本演進歷程 (Version History)</span>
+        <span class="version-tag" style="cursor:default;">v2.9 Release</span>
+      </span>
+      <button class="tree-btn" id="closeChangelogModal">✕ (Esc)</button>
+    </div>
+    <div class="modal-body">
+      <div class="changelog-scroll-wrapper">
+        <div class="changelog-timeline">
+          <div class="changelog-item current">
+            <div class="changelog-header">
+              <span class="changelog-version">v2.9 正式版 (跨節點通訊備註修復)</span>
+              <span class="changelog-date">2026-10-02</span>
+            </div>
+            <ul class="changelog-list">
+              <li><strong>通訊備註顯示修復</strong>：補齊跨節點一般通訊（包含傳入線備註與回傳線備註）的 SVG 繪製呼叫，輸入備註文字後即時於畫布兩側對齊呈現。</li>
+              <li><strong>流程圖轉換響應修復</strong>：修正流程圖 SVG 寬度屬性變數參照錯誤，恢復點擊轉換即時呼叫反應。</li>
+            </ul>
+          </div>
+
+          <div class="changelog-item">
+            <div class="changelog-header">
+              <span class="changelog-version">v2.8 正式版 (流程圖雙行結構化排版)</span>
+              <span class="changelog-date">2026-10-01</span>
+            </div>
+            <ul class="changelog-list">
+              <li><strong>流程圖文字雙行分層</strong>：流程方塊與 Alt 分支全面升級為雙行結構，第一行標示端點通訊方向（<code>A ➔ B</code> 或 <code>內部處理</code>），第二行呈現動作與 API 呼叫名稱，架構層次更加分明。</li>
+              <li><strong>流程圖 Mermaid 語法同步優化</strong>：生成語法自動整合 <code>&lt;b&gt;節點通訊&lt;/b&gt;&lt;br/&gt;動作內容</code> 標記，在外部 Markdown 檢視同樣工整。</li>
+            </ul>
+          </div>
+
+          <div class="changelog-item">
+            <div class="changelog-header">
+              <span class="changelog-version">v2.7 正式版 (排版防碰撞與流程圖純淨版)</span>
+              <span class="changelog-date">2026-10-01</span>
+            </div>
+            <ul class="changelog-list">
+              <li><strong>首筆通訊垂直邊距加大</strong>：首筆通訊起點擴增至 <code>topPad + 75px</code>，保留充足安全邊距，徹底消除文字標籤與節點框線重疊碰撞問題。</li>
+              <li><strong>流程圖預設排除回傳資訊</strong>：預設僅保留正向業務動線與決策分支，排除冗長的回傳步驟方塊，並提供勾選開關供自由切換。</li>
+            </ul>
+          </div>
+
+          <div class="changelog-item">
+            <div class="changelog-header">
+              <span class="changelog-version">v2.6 正式版 (時序轉流程圖跨維度版)</span>
+              <span class="changelog-date">2026-10-01</span>
+            </div>
+            <ul class="changelog-list">
+              <li><strong>時序轉流程圖功能</strong>：新增「🔀 轉為流程圖」核心轉換器，自動將跨節點通訊、內部處理、區間說明與 Alt 分支編譯為邏輯流程圖。</li>
+              <li><strong>Alt 分支編譯為決策菱形</strong>：自動映射為條件菱形並劃分「符合」與「不符」分支，最後安全匯流。</li>
+              <li><strong>多元匯出支援</strong>：流程圖支援向量 SVG 即時預覽、Mermaid <code>flowchart TD</code> 複製、以及匯出 PNG 圖檔與 SVG 向量圖。</li>
+            </ul>
+          </div>
+
+          <div class="changelog-item">
+            <div class="changelog-header">
+              <span class="changelog-version">v2.5 正式版 (全畫布同步純淨版)</span>
+              <span class="changelog-date">2026-10-01</span>
+            </div>
+            <ul class="changelog-list">
+              <li><strong>移除 LocalStorage 快取</strong>：完全移除瀏覽器本地暫存，自動同步直接與本機或微軟 OneDrive 檔案實體對接，確保資料來源單一且安全。</li>
+              <li><strong>全畫布自動同步保障</strong>：自動儲存範圍涵蓋專案內全部畫布分頁，分頁切換、編輯、新增、複製與刪除皆納入自動同步。</li>
+              <li><strong>版面精簡化</strong>：移除頂部「版本歷程」按鈕，改由點擊版號標籤（v2.9）直接喚起彈窗。</li>
+            </ul>
+          </div>
+
+          <div class="changelog-item">
+            <div class="changelog-header">
+              <span class="changelog-version">v2.4 效能與架構強韌版</span>
+              <span class="changelog-date">2026-10-01</span>
+            </div>
+            <ul class="changelog-list">
+              <li><strong>AutoSave 離頁保護與失效清除</strong>：新增 <code>beforeunload</code> 防護，同步失敗時安全斷開 Handle 並主動告警。</li>
+              <li><strong>智慧選取邏輯全面統一</strong>：Alt 條件框架與 Note Over 區間說明全面支援節點相鄰推導。</li>
+              <li><strong>節點防誤刪保護</strong>：刪除節點時提供確認視窗以防相依連線清空；流程項目維持即時刪除。</li>
+              <li><strong>輸入去抖動 (Debounce)</strong>：導入 RAF 渲染節流，大型流程圖輸入打字維持 60fps 流暢無卡頓。</li>
+              <li><strong>標題與節點寬度自適應</strong>：自動測繪節點與全域標題字串寬度，動態延展排版，杜絕文字溢出。</li>
+            </ul>
+          </div>
+
+          <div class="changelog-item">
+            <div class="changelog-header">
+              <span class="changelog-version">v2.3 正式版 (操作互動進化 & 匯出強化)</span>
+              <span class="changelog-date">2026-10-01</span>
+            </div>
+            <ul class="changelog-list">
+              <li><strong>智慧節點相鄰通訊流</strong>：選取節點後點擊「新增通訊」，預設由該節點出發發送至右方相鄰節點；若位於最右側節點則自動轉向發往左方節點。</li>
+              <li><strong>節點刪除保護機制</strong>：刪除節點時若包含關聯通訊連線，將彈出防誤刪提示，避免意外清除相依步驟。</li>
+              <li><strong>PNG 匯出比例獨立</strong>：重構 PNG 匯出尺寸運算，產出圖檔尺寸完全鎖定畫布原始規格，徹底不受介面縮放比例影響。</li>
+              <li><strong>鍵盤 Delete 快捷刪除</strong>：選中節點或流程時，按下鍵盤 Delete 鍵即可迅速進行刪除。</li>
+            </ul>
+          </div>
+
+          <div class="changelog-item">
+            <div class="changelog-header">
+              <span class="changelog-version">v2.2 正式版 (雙向即時自動存檔 & 滾動體驗修復)</span>
+              <span class="changelog-date">2026-10-01</span>
+            </div>
+            <ul class="changelog-list">
+              <li>整合 File System Access API，支援連結本機與微軟 OneDrive 資料夾進行無感背景自動同步儲存。</li>
+              <li>修復版本更新歷程彈窗滑鼠滾輪獨立滾動功能。</li>
+              <li>頂端匯出選單簡化，專注產出 PNG、SVG 與 Mermaid 格式。</li>
+            </ul>
+          </div>
+
+          <div class="changelog-item">
+            <div class="changelog-header">
+              <span class="changelog-version">v2.1 正式版</span>
+              <span class="changelog-date">2026-09-30</span>
+            </div>
+            <ul class="changelog-list">
+              <li>引進雙層按鈕結構，支援「+ 條件判斷 (Alt 框架)」分支片段。</li>
+              <li>全面支援包含空白條件的 alt 語法 Mermaid 雙向解析。</li>
+            </ul>
+          </div>
+
+          <div class="changelog-item">
+            <div class="changelog-header">
+              <span class="changelog-version">v2.0 正式版</span>
+              <span class="changelog-date">2026-09-30</span>
+            </div>
+            <ul class="changelog-list">
+              <li>重構架構，新增底部 draw.io 風格之多工作表畫布分頁 (Bottom Sheet Tabs)。</li>
+              <li>支援分頁獨立命名、複製、刪除與全域復原/重做歷史棧。</li>
+            </ul>
+          </div>
+
+          <div class="changelog-item">
+            <div class="changelog-header">
+              <span class="changelog-version">v1.2 強化版</span>
+              <span class="changelog-date">2026-09-20</span>
+            </div>
+            <ul class="changelog-list">
+              <li>新增 Note Over 區間說明框，支援跨節點註記與自訂配色。</li>
+              <li>新增流程錯誤與逾時 (Timeout) 紅色虛線警示標記。</li>
+              <li>支援 Mermaid sequenceDiagram 雙向匯入與匯出代碼。</li>
+            </ul>
+          </div>
+
+          <div class="changelog-item">
+            <div class="changelog-header">
+              <span class="changelog-version">v1.1 最佳化版</span>
+              <span class="changelog-date">2026-09-15</span>
+            </div>
+            <ul class="changelog-list">
+              <li>加入拖曳把手 (⋮⋮) 支援直覺的清單拖曳排序 (Drag & Drop)。</li>
+              <li>支援內部操作處理 (Loopback 自回傳連線) 與獨立回傳線。</li>
+              <li>強化高畫質 SVG 與 PNG 圖檔匯出。</li>
+            </ul>
+          </div>
+
+          <div class="changelog-item">
+            <div class="changelog-header">
+              <span class="changelog-version">v1.0 初版發布</span>
+              <span class="changelog-date">2026-09-01</span>
+            </div>
+            <ul class="changelog-list">
+              <li>基礎時序流程圖產生器問世，支援節點建立、同步/非同步呼叫連線與即時 SVG 預覽。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+const $ = s => document.querySelector(s);
+const uid = p => `${p}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+const esc = s => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function sanitizeColor(val, fallback = '#1e293b') {
+  if (typeof val === 'string' && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(val.trim())) {
+    return val.trim();
+  }
+  return fallback;
+}
+
+function showToast(text) {
+  const el = $('#toast');
+  el.textContent = text;
+  el.classList.add('active');
+  setTimeout(() => el.classList.remove('active'), 2200);
+}
+
+const PRESET_TEXT_COLORS = [
+  { label: '預設灰黑 (#1e293b)', val: '#1e293b' },
+  { label: '深藍色 (#2563eb)', val: '#2563eb' },
+  { label: '翠綠色 (#059669)', val: '#059669' },
+  { label: '琥珀黃 (#d97706)', val: '#d97706' },
+  { label: '赤紅色 (#dc2626)', val: '#dc2626' },
+  { label: '青蓮紫 (#7c3aed)', val: '#7c3aed' },
+  { label: '自訂顏色...', val: 'custom' }
+];
+
+const HIGHLIGHT_PRESETS = [
+  { id: 'none', label: '無標記', fill: 'transparent', border: 'transparent' },
+  { id: 'yellow', label: '柔光亮黃', fill: '#fef08a', border: '#eab308' },
+  { id: 'green', label: '柔光薄荷綠', fill: '#bbf7d0', border: '#22c55e' },
+  { id: 'pink', label: '柔光珊瑚粉', fill: '#fbcfe8', border: '#f43f5e' },
+  { id: 'blue', label: '柔光天空藍', fill: '#bae6fd', border: '#38bdf8' }
+];
+
+function getHighlightConfig(id) {
+  return HIGHLIGHT_PRESETS.find(h => h.id === id) || HIGHLIGHT_PRESETS[0];
+}
+
+/* =========================================================================
+   多畫布工作表架構 (Bottom Sheet Tabs) & 全畫布雙向即時自動存檔控制
+   ========================================================================= */
+
+function createEmptyCanvas(name) {
+  return {
+    id: uid('sheet'),
+    name: name || '第1頁',
+    state: {
+      title: '',
+      footerNote: '',
+      nodeGap: 200,
+      stepGap: 100,
+      nodes: [],
+      messages: []
+    },
+    selection: { type: 'global', id: null },
+    undoStack: [],
+    redoStack: [],
+    historyDebounceTimer: null,
+    pendingHistorySnapshot: null
+  };
+}
+
+let canvases = [
+  createEmptyCanvas('第1頁')
+];
+let activeCanvasId = canvases[0].id;
+let targetMenuSheetId = null;
+let zoomScale = 1.0;
+const MAX_HISTORY = 40;
+
+let currentFileHandle = null;
+let autoSaveTimer = null;
+let hasUnsavedChanges = false;
+
+// 離頁防護：全畫布資料更動確認
+window.addEventListener('beforeunload', (e) => {
+  if (hasUnsavedChanges || autoSaveTimer !== null) {
+    if (currentFileHandle) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  }
+});
+
+function updateSyncStatusUI(status, fileName = '') {
+  const el = $('#syncStatusBadge');
+  const count = canvases.length;
+  if (status === 'synced') {
+    el.className = 'sync-status-badge synced';
+    el.innerHTML = `🟢 全畫布已同步 (${count} 頁)：${esc(fileName)}`;
+    el.title = `微軟 OneDrive / 本機同步中，已完整同步全部 ${count} 個畫布分頁`;
+  } else if (status === 'saving') {
+    el.className = 'sync-status-badge saving';
+    el.innerHTML = `💾 全畫布儲存中 (${count} 頁)...`;
+    el.title = `正在自動同步全部 ${count} 個畫布分頁資料`;
+  } else {
+    el.className = 'sync-status-badge';
+    el.innerHTML = `☁️ 離線模式 (未連結檔案)`;
+    el.title = `目前未連結 OneDrive 或本機檔案`;
+  }
+}
+
+// 建構包含全部畫布的整體專案包裹
+function buildProjectDataPackage() {
+  const exportCanvases = canvases.map(c => ({
+    id: c.id,
+    name: c.name,
+    state: JSON.parse(JSON.stringify(c.state))
+  }));
+
+  return {
+    version: '2.9',
+    exportTime: new Date().toISOString(),
+    designer: 'WeiHsun',
+    activeCanvasId,
+    canvases: exportCanvases
+  };
+}
+
+// 刷新並收攏所有畫布的未決歷史紀錄
+function flushAllPendingHistories() {
+  canvases.forEach(c => {
+    if (c.historyDebounceTimer) {
+      clearTimeout(c.historyDebounceTimer);
+      c.historyDebounceTimer = null;
+    }
+    if (c.pendingHistorySnapshot !== null) {
+      c.undoStack.push(c.pendingHistorySnapshot);
+      if (c.undoStack.length > MAX_HISTORY) c.undoStack.shift();
+      c.redoStack.length = 0;
+      c.pendingHistorySnapshot = null;
+    }
+  });
+}
+
+// 全畫布自動同步排程器
+async function scheduleAutoSave() {
+  if (!currentFileHandle) return;
+  if (autoSaveTimer) clearTimeout(autoSaveTimer);
+
+  updateSyncStatusUI('saving');
+  autoSaveTimer = setTimeout(async () => {
+    try {
+      flushAllPendingHistories();
+      const dataPackage = buildProjectDataPackage();
+      const writable = await currentFileHandle.createWritable();
+      await writable.write(JSON.stringify(dataPackage, null, 2));
+      await writable.close();
+      hasUnsavedChanges = false;
+      autoSaveTimer = null;
+      updateSyncStatusUI('synced', currentFileHandle.name);
+    } catch (err) {
+      console.warn('全畫布自動同步失敗：', err);
+      autoSaveTimer = null;
+      currentFileHandle = null;
+      updateSyncStatusUI('offline');
+      showToast('⚠️ 自動儲存失敗（檔案連結已中斷），請重新另存同步檔！');
+    }
+  }, 600);
+}
+
+function getActiveCanvas() {
+  return canvases.find(c => c.id === activeCanvasId) || canvases[0];
+}
+
+function getState() { return getActiveCanvas().state; }
+function getSelection() { return getActiveCanvas().selection; }
+function setSelection(sel) { getActiveCanvas().selection = sel; }
+
+/* 歷史記錄管理 */
+function beginDebouncedHistory() {
+  hasUnsavedChanges = true;
+  const c = getActiveCanvas();
+  if (c.pendingHistorySnapshot === null) {
+    c.pendingHistorySnapshot = JSON.stringify(c.state);
+  }
+  if (c.historyDebounceTimer) {
+    clearTimeout(c.historyDebounceTimer);
+  }
+  c.historyDebounceTimer = setTimeout(() => {
+    commitPendingHistory();
+    c.historyDebounceTimer = null;
+  }, 300);
+}
+
+function commitPendingHistory() {
+  const c = getActiveCanvas();
+  if (c.pendingHistorySnapshot !== null) {
+    c.undoStack.push(c.pendingHistorySnapshot);
+    if (c.undoStack.length > MAX_HISTORY) c.undoStack.shift();
+    c.redoStack.length = 0;
+    c.pendingHistorySnapshot = null;
+    updateHistoryButtons();
+    scheduleAutoSave();
+  }
+}
+
+function flushPendingHistory() {
+  flushAllPendingHistories();
+  updateHistoryButtons();
+}
+
+function pushHistoryDirect() {
+  hasUnsavedChanges = true;
+  const c = getActiveCanvas();
+  flushPendingHistory();
+  c.undoStack.push(JSON.stringify(c.state));
+  if (c.undoStack.length > MAX_HISTORY) c.undoStack.shift();
+  c.redoStack.length = 0;
+  updateHistoryButtons();
+  scheduleAutoSave();
+}
+
+function updateHistoryButtons() {
+  const c = getActiveCanvas();
+  $('#undoBtn').disabled = (c.undoStack.length === 0 && c.pendingHistorySnapshot === null);
+  $('#redoBtn').disabled = c.redoStack.length === 0;
+}
+
+function undo() {
+  const c = getActiveCanvas();
+  flushPendingHistory();
+  if (c.undoStack.length === 0) return;
+  hasUnsavedChanges = true;
+  c.redoStack.push(JSON.stringify(c.state));
+  c.state = JSON.parse(c.undoStack.pop());
+  cleanOrphanMessages();
+  updateHistoryButtons();
+  selectItem('global');
+  scheduleAutoSave();
+  showToast('已返回上一動');
+}
+
+function redo() {
+  const c = getActiveCanvas();
+  flushPendingHistory();
+  if (c.redoStack.length === 0) return;
+  hasUnsavedChanges = true;
+  c.undoStack.push(JSON.stringify(c.state));
+  c.state = JSON.parse(c.redoStack.pop());
+  cleanOrphanMessages();
+  updateHistoryButtons();
+  selectItem('global');
+  scheduleAutoSave();
+  showToast('已恢復下一動');
+}
+
+$('#undoBtn').onclick = undo;
+$('#redoBtn').onclick = redo;
+
+/* 渲染去抖動 (RAF & Timer) 節流控制 */
+let canvasRenderRaf = null;
+function debouncedRenderCanvas() {
+  if (canvasRenderRaf) cancelAnimationFrame(canvasRenderRaf);
+  canvasRenderRaf = requestAnimationFrame(() => {
+    renderCanvas();
+    canvasRenderRaf = null;
+  });
+}
+
+let treeRenderTimer = null;
+function debouncedRenderTrees(delay = 150) {
+  if (treeRenderTimer) clearTimeout(treeRenderTimer);
+  treeRenderTimer = setTimeout(() => {
+    renderTrees();
+    treeRenderTimer = null;
+  }, delay);
+}
+
+/* 渲染底部工作表分頁列 */
+function renderSheets() {
+  const container = $('#sheetsContainer');
+  container.innerHTML = canvases.map(c => `
+    <div class="sheet-tab ${c.id === activeCanvasId ? 'active' : ''}" data-sheet-id="${c.id}" title="雙擊可直接重新命名">
+      <span class="sheet-name">${esc(c.name)}</span>
+      <span class="sheet-dropdown-trigger" data-dropdown-id="${c.id}">▾</span>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.sheet-tab').forEach(item => {
+    const id = item.dataset.sheetId;
+    item.addEventListener('click', (e) => {
+      if (e.target.classList.contains('sheet-dropdown-trigger')) return;
+      switchCanvasTab(id);
+    });
+    item.addEventListener('dblclick', () => renameCanvasTab(id));
+  });
+
+  container.querySelectorAll('.sheet-dropdown-trigger').forEach(trigger => {
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openSheetMenu(trigger.dataset.dropdownId, trigger);
+    });
+  });
+}
+
+function switchCanvasTab(id) {
+  if (activeCanvasId === id) return;
+  flushPendingHistory();
+  activeCanvasId = id;
+  renderSheets();
+  renderCanvas();
+  renderTrees();
+  renderInspector();
+  updateHistoryButtons();
+  scheduleAutoSave();
+}
+
+function renameCanvasTab(id) {
+  const c = canvases.find(x => x.id === id);
+  if (!c) return;
+  const newName = prompt('請輸入分頁名稱：', c.name);
+  if (newName && newName.trim()) {
+    c.name = newName.trim();
+    hasUnsavedChanges = true;
+    renderSheets();
+    scheduleAutoSave();
+    showToast('分頁名稱已更新！');
+  }
+}
+
+function duplicateCanvas(id) {
+  const c = canvases.find(x => x.id === id);
+  if (!c) return;
+  const newCanvas = {
+    id: uid('sheet'),
+    name: `${c.name} (副本)`,
+    state: JSON.parse(JSON.stringify(c.state)),
+    selection: { type: 'global', id: null },
+    undoStack: [],
+    redoStack: [],
+    historyDebounceTimer: null,
+    pendingHistorySnapshot: null
+  };
+  hasUnsavedChanges = true;
+  canvases.push(newCanvas);
+  switchCanvasTab(newCanvas.id);
+  scheduleAutoSave();
+  showToast('已複製畫布分頁！');
+}
+
+function deleteCanvas(id) {
+  if (canvases.length <= 1) {
+    return showToast('至少需保留一個分頁！');
+  }
+  const idx = canvases.findIndex(x => x.id === id);
+  if (idx === -1) return;
+
+  if (confirm(`確定刪除「${canvases[idx].name}」畫布？`)) {
+    hasUnsavedChanges = true;
+    canvases.splice(idx, 1);
+    if (activeCanvasId === id) {
+      activeCanvasId = canvases[Math.max(0, idx - 1)].id;
+    }
+    renderSheets();
+    renderCanvas();
+    renderTrees();
+    renderInspector();
+    updateHistoryButtons();
+    scheduleAutoSave();
+    showToast('已刪除畫布分頁');
+  }
+}
+
+function openSheetMenu(sheetId, element) {
+  targetMenuSheetId = sheetId;
+  const menu = $('#sheetDropdownMenu');
+  const rect = element.getBoundingClientRect();
+  menu.style.left = `${rect.left - 40}px`;
+  menu.style.bottom = `${window.innerHeight - rect.top + 6}px`;
+  menu.hidden = false;
+}
+
+function closeSheetMenu() {
+  $('#sheetDropdownMenu').hidden = true;
+  targetMenuSheetId = null;
+}
+
+window.addEventListener('click', (e) => {
+  if (!e.target.closest('#sheetDropdownMenu') && !e.target.classList.contains('sheet-dropdown-trigger')) {
+    closeSheetMenu();
+  }
+});
+
+$('#menuRenameSheet').onclick = () => {
+  const id = targetMenuSheetId;
+  closeSheetMenu();
+  if (id) renameCanvasTab(id);
+};
+
+$('#menuDuplicateSheet').onclick = () => {
+  const id = targetMenuSheetId;
+  closeSheetMenu();
+  if (id) duplicateCanvas(id);
+};
+
+$('#menuDeleteSheet').onclick = () => {
+  const id = targetMenuSheetId;
+  closeSheetMenu();
+  if (id) deleteCanvas(id);
+};
+
+$('#addSheetBtn').onclick = () => {
+  hasUnsavedChanges = true;
+  const newCanvas = createEmptyCanvas(`第${canvases.length + 1}頁`);
+  canvases.push(newCanvas);
+  switchCanvasTab(newCanvas.id);
+  scheduleAutoSave();
+  showToast('已建立新畫布分頁！');
+};
+
+/* 彈窗控制 */
+function openModal(modalId) {
+  const el = $(modalId);
+  if (el) el.hidden = false;
+}
+
+function closeModal(modalId) {
+  const el = $(modalId);
+  if (el) el.hidden = true;
+}
+
+document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+  backdrop.addEventListener('click', (e) => {
+    if (e.target === backdrop) backdrop.hidden = true;
+  });
+});
+
+// 版號標籤點擊開啟版本歷程
+$('#versionBadge').addEventListener('click', (e) => {
+  e.stopPropagation();
+  openModal('#changelogModal');
+});
+$('#closeChangelogModal').addEventListener('click', (e) => {
+  e.stopPropagation();
+  closeModal('#changelogModal');
+});
+
+/* 鍵盤監聽事件 */
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeModal('#changelogModal');
+    closeModal('#mermaidModal');
+    closeModal('#saveExportModal');
+    closeModal('#flowchartModal');
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+    if (e.shiftKey) { e.preventDefault(); redo(); }
+    else { e.preventDefault(); undo(); }
+  } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+    e.preventDefault(); redo();
+  }
+
+  if (e.key === 'Delete') {
+    const activeTagName = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+    if (activeTagName === 'input' || activeTagName === 'textarea') return;
+
+    const curSel = getSelection();
+    if (curSel.type === 'node' && curSel.id) {
+      e.preventDefault();
+      deleteNode(curSel.id);
+    } else if (curSel.type === 'message' && curSel.id) {
+      e.preventDefault();
+      deleteMsg(curSel.id);
+    }
+  }
+});
+
+$('#fullscreenToggleBtn').onclick = () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().then(() => {
+      document.body.classList.add('zen-mode');
+      $('#fullscreenToggleBtn').classList.add('active');
+      showToast('已進入全螢幕沉浸模式（可按 Esc 退出）');
+    }).catch(() => {
+      showToast('無法進入全螢幕');
+    });
+  } else {
+    document.exitFullscreen().then(() => {
+      document.body.classList.remove('zen-mode');
+      $('#fullscreenToggleBtn').classList.remove('active');
+      showToast('已退出全螢幕');
+    });
+  }
+};
+
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement) {
+    document.body.classList.remove('zen-mode');
+    $('#fullscreenToggleBtn').classList.remove('active');
+  }
+});
+
+function toggleRightSidebar(forceState = null) {
+  const pane = $('#rightPane');
+  const btn = $('#rightSidebarToggleBtn');
+  const isCurrentlyCollapsed = pane.classList.contains('collapsed');
+  const willCollapse = forceState !== null ? forceState : !isCurrentlyCollapsed;
+
+  if (willCollapse) {
+    pane.classList.add('collapsed');
+    btn.classList.add('active');
+    btn.title = '展開右側屬性面板';
+  } else {
+    pane.classList.remove('collapsed');
+    btn.classList.remove('active');
+    btn.title = '縮合右側屬性面板';
+  }
+}
+
+$('#rightSidebarToggleBtn').onclick = () => toggleRightSidebar();
+
+const measureCanvas = document.createElement('canvas');
+const measureCtx = measureCanvas.getContext('2d');
+
+function calculateExactTextWidth(note) {
+  if (!note) return 0;
+  measureCtx.font = '500 11.5px -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif';
+  const lines = String(note).split('\n');
+  let maxWidth = 0;
+  for (const line of lines) {
+    const w = measureCtx.measureText(line).width;
+    if (w > maxWidth) maxWidth = w;
+  }
+  return Math.min(520, Math.max(120, Math.round(maxWidth + 30)));
+}
+
+function calculateNodeWidth(name) {
+  measureCtx.font = '700 12.5px -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif';
+  const textW = measureCtx.measureText(name || '').width;
+  return Math.max(116, Math.ceil(textW + 28));
+}
+
+function cleanOrphanMessages() {
+  const state = getState();
+  const validIds = new Set(state.nodes.map(n => n.id));
+  state.messages = state.messages.filter(m => {
+    if (m.type === 'note_over' || m.type === 'alt_frame') {
+      return validIds.has(m.spanFrom) && validIds.has(m.spanTo);
+    }
+    return validIds.has(m.from) && validIds.has(m.to);
+  });
+}
+
+/** 繪製即時時序向量圖 **/
+function renderCanvas(includeNotes = true, isExportMode = false) {
+  if (canvasRenderRaf) {
+    cancelAnimationFrame(canvasRenderRaf);
+    canvasRenderRaf = null;
+  }
+
+  const state = getState();
+  const currentSelection = getSelection();
+  const ns = state.nodes;
+  const ms = state.messages;
+  const configuredNodeGap = Number(state.nodeGap) || 200;
+  const stepGap = Number(state.stepGap) || 100;
+  const hasFooterNote = Boolean(includeNotes && state.footerNote && state.footerNote.trim());
+
+  if (ns.length === 0) {
+    const totalWidth = 660;
+    const totalHeight = 350;
+    const dom = $('#diagramSvg');
+    dom.setAttribute('viewBox', `0 0 ${totalWidth} ${totalHeight}`);
+    dom.setAttribute('width', totalWidth);
+    dom.setAttribute('height', totalHeight);
+    dom.innerHTML = `
+      <rect width="100%" height="100%" fill="#ffffff" onclick="selectItem('global'); event.stopPropagation();"/>
+      <g style="cursor: pointer;" onclick="document.getElementById('addNodeFast').click();">
+        <circle cx="${totalWidth / 2}" cy="${totalHeight / 2 - 24}" r="28" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="4 4"/>
+        <text x="${totalWidth / 2}" y="${totalHeight / 2 - 16}" font-size="24" fill="#3b82f6" text-anchor="middle" font-family="sans-serif">+</text>
+        <text x="${totalWidth / 2}" y="${totalHeight / 2 + 26}" font-size="14" font-weight="700" fill="#334155" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">目前畫布為空白</text>
+        <text x="${totalWidth / 2}" y="${totalHeight / 2 + 46}" font-size="12" fill="#64748b" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">點擊此處或左側「+ 新增節點」開始繪製</text>
+      </g>
+    `;
+    return;
+  }
+
+  const nodeWidthMap = {};
+  let maxNodeWidth = 116;
+  ns.forEach(n => {
+    const nw = calculateNodeWidth(n.name);
+    nodeWidthMap[n.id] = nw;
+    if (nw > maxNodeWidth) maxNodeWidth = nw;
+  });
+
+  const effectiveNodeGap = Math.max(configuredNodeGap, maxNodeWidth + 30);
+
+  let titleWidth = 0;
+  if (state.title && state.title.trim()) {
+    measureCtx.font = '700 18px -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif';
+    titleWidth = measureCtx.measureText(state.title.trim()).width + 80;
+  }
+
+  let maxLeftOffset = 0;
+  let maxRightOffset = 0;
+
+  if (includeNotes) {
+    ms.forEach(m => {
+      if (m.type === 'note_over' || m.type === 'alt_frame') return;
+      if (m.reqNote) {
+        const w = calculateExactTextWidth(m.reqNote) + 35;
+        if (m.reqNoteSide === 'left') maxLeftOffset = Math.max(maxLeftOffset, w);
+        else maxRightOffset = Math.max(maxRightOffset, w);
+      }
+      if (m.reply && m.resNote && m.from !== m.to && m.type !== 'reply_only') {
+        const w = calculateExactTextWidth(m.resNote) + 35;
+        if (m.resNoteSide === 'left') maxLeftOffset = Math.max(maxLeftOffset, w);
+        else maxRightOffset = Math.max(maxRightOffset, w);
+      }
+      if (m.from === m.to) maxRightOffset = Math.max(maxRightOffset, 65);
+    });
+  } else {
+    ms.forEach(m => {
+      if (m.from === m.to) maxRightOffset = Math.max(maxRightOffset, 65);
+    });
+  }
+
+  const firstNodeHalfW = ns.length > 0 ? (nodeWidthMap[ns[0].id] / 2) : 58;
+  const lastNodeHalfW = ns.length > 0 ? (nodeWidthMap[ns[ns.length - 1].id] / 2) : 58;
+
+  const leftPad = Math.max(120, maxLeftOffset + 45, Math.ceil(firstNodeHalfW + 25));
+  const rightPad = Math.max(120, maxRightOffset + 45, Math.ceil(lastNodeHalfW + 25));
+  const topPad = state.title ? 90 : 55;
+
+  let footerExtraH = 0;
+  let footerLines = [];
+  if (hasFooterNote) {
+    footerLines = String(state.footerNote).split('\n');
+    footerExtraH = Math.max(48, footerLines.length * 18 + 28);
+  }
+
+  // 第一筆通訊垂直起點擴增至 topPad + 75px，保留充足安全邊距
+  let currentY = topPad + 75;
+  const stepPositions = [];
+
+  ms.forEach(m => {
+    if (m.type === 'note_over') {
+      if (includeNotes) {
+        stepPositions.push({ y: currentY, type: 'note_over' });
+        currentY += 90;
+      } else {
+        stepPositions.push({ y: currentY, type: 'note_over', skip: true });
+      }
+    } else if (m.type === 'alt_frame') {
+      const hasReply = Boolean(m.ifReply && m.ifReply.trim());
+      const frameHeight = hasReply ? 150 : 115;
+      stepPositions.push({ y: currentY, type: 'alt_frame', frameHeight, hasReply });
+      currentY += frameHeight + 25;
+    } else {
+      stepPositions.push({ y: currentY, type: 'normal' });
+      const hasReplyText = Boolean(m.reply && m.replyName && m.replyName.trim());
+      const replyOffset = hasReplyText ? 34 : 20;
+      currentY += (m.reply ? replyOffset : 0) + stepGap;
+    }
+  });
+
+  const baseHeight = currentY + 30;
+  const nodesTotalSpan = leftPad + rightPad + Math.max(0, ns.length - 1) * effectiveNodeGap;
+  const totalWidth = Math.max(660, nodesTotalSpan, Math.ceil(titleWidth));
+  const totalHeight = Math.max(350, baseHeight + (hasFooterNote ? footerExtraH + 24 : 0));
+
+  let actualLeftPad = leftPad;
+  if (totalWidth > nodesTotalSpan) {
+    actualLeftPad += (totalWidth - nodesTotalSpan) / 2;
+  }
+
+  const coords = {};
+  ns.forEach((n, idx) => coords[n.id] = actualLeftPad + idx * effectiveNodeGap);
+
+  let svg = `
+    <defs>
+      <marker id="arrow" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+        <path d="M0 0L9 3.5L0 7z" fill="#334155"/>
+      </marker>
+      <marker id="arrow-active" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+        <path d="M0 0L9 3.5L0 7z" fill="#2563eb"/>
+      </marker>
+      <marker id="arrow-timeout" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+        <path d="M0 0L9 3.5L0 7z" fill="#ef4444"/>
+      </marker>
+      <pattern id="yellowHatchPattern" width="7" height="7" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+        <line x1="0" y1="0" x2="0" y2="7" stroke="#fde047" stroke-width="0.9" opacity="0.8" />
+      </pattern>
+    </defs>
+    <style>
+      .t-title { font: 700 18px -apple-system, BlinkMacSystemFont, 'Microsoft JhengHei', sans-serif; fill: #0f172a; }
+      .t-node { font: 700 12.5px -apple-system, BlinkMacSystemFont, 'Microsoft JhengHei', sans-serif; fill: #0f172a; }
+      .t-label { font: 600 12px -apple-system, BlinkMacSystemFont, 'Microsoft JhengHei', sans-serif; }
+      .t-api { font: 11.5px Consolas, Monaco, monospace; }
+      .t-timeout { font: 700 11.5px -apple-system, BlinkMacSystemFont, 'Microsoft JhengHei', sans-serif; fill: #ef4444 !important; }
+      .t-note { font: 11px -apple-system, BlinkMacSystemFont, 'Microsoft JhengHei', sans-serif; fill: #1e293b; font-weight: 500; }
+      .t-footer-note { font: 11.5px -apple-system, BlinkMacSystemFont, 'Microsoft JhengHei', sans-serif; fill: #1e293b; font-weight: 600; }
+      .life-line { stroke: #94a3b8; stroke-dasharray: 4 4; stroke-width: 1.2; }
+      .wire { stroke: #334155; stroke-width: 1.5; fill: none; }
+      .wire-timeout { stroke: #ef4444 !important; stroke-dasharray: 4 3 !important; stroke-width: 1.5; }
+      .pin-node { fill: #ffffff; stroke: #64748b; stroke-width: 1.5; }
+      .hit-target { stroke: transparent; stroke-width: 18; cursor: pointer; fill: none; }
+    </style>
+    <rect width="100%" height="100%" fill="#ffffff" onclick="selectItem('global'); event.stopPropagation();"/>
+  `;
+
+  if (state.title) {
+    svg += `<text class="t-title" x="${totalWidth / 2}" y="38" text-anchor="middle">${esc(state.title)}</text>`;
+  }
+
+  const lifelineBottom = baseHeight - 20;
+
+  // 繪製參與者節點 (自適應寬度)
+  ns.forEach(n => {
+    const x = coords[n.id];
+    const isSelected = !isExportMode && currentSelection.type === 'node' && currentSelection.id === n.id;
+    const cleanFill = sanitizeColor(n.fill, '#eef5ff');
+    const cleanStroke = sanitizeColor(n.stroke, '#2563eb');
+    const nw = nodeWidthMap[n.id] || 116;
+    const halfW = nw / 2;
+
+    svg += `
+      <g class="clickable" onclick="selectItem('node', '${n.id}'); event.stopPropagation();">
+        <rect x="${x - halfW}" y="${topPad - 24}" width="${nw}" height="38" rx="5" fill="${cleanFill}" stroke="${cleanStroke}" stroke-width="${isSelected ? 3 : 1.5}"/>
+        <text class="t-node" x="${x}" y="${topPad - 1}" text-anchor="middle" pointer-events="none">${esc(n.name)}</text>
+      </g>
+      <line class="life-line" x1="${x}" x2="${x}" y1="${topPad + 14}" y2="${lifelineBottom}"/>
+    `;
+  });
+
+  function buildNoteMarkup(text, side, targetY, x1, x2) {
+    if (!text || !includeNotes) return '';
+    const nw = calculateExactTextWidth(text);
+    const lines = text.split('\n');
+    const lineHeight = 16.5;
+    const paddingY = 13;
+    const nh = Math.max(34, paddingY * 2 + (lines.length - 1) * lineHeight);
+    
+    const nx = side === 'left' ? Math.max(10, Math.min(x1, x2) - nw - 16) : Math.min(totalWidth - nw - 10, Math.max(x1, x2) + 16);
+    const ny = targetY - nh / 2;
+
+    const startTextY = ny + (nh / 2) - ((lines.length - 1) * lineHeight / 2) + 4;
+    const centerX = nx + (nw / 2);
+
+    return `
+      <line x1="${side === 'left' ? nx + nw : nx}" y1="${targetY}" x2="${side === 'left' ? Math.min(x1, x2) - 4 : Math.max(x1, x2) + 4}" y2="${targetY}" stroke="#eab308" stroke-dasharray="3 3" stroke-width="1.2"/>
+      <rect x="${nx}" y="${ny}" width="${nw}" height="${nh}" rx="6" fill="#fffdf0"/>
+      <rect x="${nx}" y="${ny}" width="${nw}" height="${nh}" rx="6" fill="url(#yellowHatchPattern)"/>
+      ${lines.map((l, i) => `
+        <text class="t-note" x="${centerX}" y="${startTextY + i * lineHeight}" text-anchor="middle">${esc(l)}</text>
+      `).join('')}
+    `;
+  }
+
+  // 繪製步驟
+  ms.forEach((m, idx) => {
+    const pos = stepPositions[idx];
+    if (pos.skip) return;
+    const y = pos.y;
+    const isSelected = !isExportMode && currentSelection.type === 'message' && currentSelection.id === m.id;
+
+    // A：Note Over
+    if (m.type === 'note_over') {
+      const sx1 = coords[m.spanFrom];
+      const sx2 = coords[m.spanTo];
+      if (sx1 == null || sx2 == null) return;
+
+      const minX = Math.min(sx1, sx2) - 30;
+      const maxX = Math.max(sx1, sx2) + 30;
+      const boxW = Math.max(160, maxX - minX);
+      const boxH = 28;
+      const fill = sanitizeColor(m.fill, '#fef08a');
+      const stroke = sanitizeColor(m.stroke, '#ca8a04');
+      const textColor = sanitizeColor(m.textColor, '#1e293b');
+
+      svg += `
+        <g class="clickable" onclick="selectItem('message', '${m.id}'); event.stopPropagation();">
+          ${isSelected ? `<rect x="${minX - 3}" y="${y - 3}" width="${boxW + 6}" height="${boxH + 6}" rx="6" fill="none" stroke="#2563eb" stroke-width="2.5" opacity="0.8"/>` : ''}
+          <rect x="${minX}" y="${y}" width="${boxW}" height="${boxH}" rx="4" fill="${fill}" stroke="${stroke}" stroke-width="1.2"/>
+          <text class="t-span-note" x="${minX + boxW / 2}" y="${y + 18}" text-anchor="middle" dominant-baseline="middle" fill="${textColor}" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif" font-size="12" font-weight="700">${esc(m.spanTitle || '')}</text>
+        </g>
+      `;
+      return;
+    }
+
+    // B：Alt 框架
+    if (m.type === 'alt_frame') {
+      const sx1 = coords[m.spanFrom];
+      const sx2 = coords[m.spanTo];
+      if (sx1 == null || sx2 == null) return;
+
+      const minX = Math.min(sx1, sx2) - 45;
+      const maxX = Math.max(sx1, sx2) + 45;
+      const frameW = Math.max(220, maxX - minX);
+      const hasReply = pos.hasReply;
+      const frameH = pos.frameHeight;
+
+      const ifReqY = y + 36;
+      const ifReplyY = y + 70;
+      const dividerY = hasReply ? y + 92 : y + 58;
+      const elseActY = dividerY + 34;
+
+      const ifReqText = m.ifAction || '';
+      const ifRepText = m.ifReply || '';
+      const elseCond = m.elseCondition ? `[${m.elseCondition}]` : '[else]';
+      const elseText = m.elseAction || '';
+      const isElseError = m.elseStatus === 'timeout';
+
+      svg += `
+        <g class="clickable" onclick="selectItem('message', '${m.id}'); event.stopPropagation();">
+          ${isSelected ? `<rect x="${minX - 3}" y="${y - 3}" width="${frameW + 6}" height="${frameH + 6}" rx="6" fill="none" stroke="#2563eb" stroke-width="2.5" opacity="0.85"/>` : ''}
+          <rect x="${minX}" y="${y}" width="${frameW}" height="${frameH}" rx="5" fill="rgba(243, 244, 246, 0.6)" stroke="#a855f7" stroke-width="1.5"/>
+          <path d="M ${minX} ${y} L ${minX + 38} ${y} L ${minX + 46} ${y + 16} L ${minX} ${y + 16} Z" fill="#a855f7"/>
+          <text x="${minX + 19}" y="${y + 12}" fill="#ffffff" font-size="10.5" font-weight="700" text-anchor="middle">alt</text>
+          <text x="${minX + 54}" y="${y + 13}" fill="#6b21a8" font-size="11" font-weight="700">${m.condition ? `[${esc(m.condition)}]` : ''}</text>
+
+          <line x1="${sx1}" y1="${ifReqY}" x2="${sx2}" y2="${ifReqY}" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-active)"/>
+          <text x="${(sx1 + sx2) / 2}" y="${ifReqY - 6}" font-size="11" font-weight="600" fill="#1e40af" text-anchor="middle">${esc(ifReqText)}</text>
+      `;
+
+      if (hasReply) {
+        svg += `
+          <line x1="${sx2}" y1="${ifReplyY}" x2="${sx1}" y2="${ifReplyY}" stroke="#2563eb" stroke-dasharray="4 3" stroke-width="1.5" marker-end="url(#arrow-active)"/>
+          <text x="${(sx1 + sx2) / 2}" y="${ifReplyY - 6}" font-size="11" font-weight="600" fill="#2563eb" text-anchor="middle">${esc(ifRepText)}</text>
+        `;
+      }
+
+      svg += `
+          <line x1="${minX}" y1="${dividerY}" x2="${minX + frameW}" y2="${dividerY}" stroke="#a855f7" stroke-dasharray="4 3" stroke-width="1.2"/>
+          <text x="${minX + 14}" y="${dividerY + 14}" fill="#6b21a8" font-size="10.5" font-weight="700" text-anchor="start">${esc(elseCond)}</text>
+
+          <line x1="${sx2}" y1="${elseActY}" x2="${sx1}" y2="${elseActY}" stroke="${isElseError ? '#ef4444' : '#64748b'}" stroke-dasharray="4 3" stroke-width="1.5" marker-end="${isElseError ? 'url(#arrow-timeout)' : 'url(#arrow)'}"/>
+          <text x="${(sx1 + sx2) / 2}" y="${elseActY - 6}" font-size="11" font-weight="600" fill="${isElseError ? '#dc2626' : '#475569'}" text-anchor="middle">${esc(elseText)}</text>
+        </g>
+      `;
+      return;
+    }
+
+    // C：標準通訊連線
+    const x1 = coords[m.from];
+    const x2 = coords[m.to];
+    if (x1 == null || x2 == null) return;
+
+    const isCallTimeout = m.status === 'timeout';
+    const isReplyTimeout = m.replyStatus === 'timeout';
+
+    let callColor = isCallTimeout ? '#ef4444' : (isSelected ? '#2563eb' : '#334155');
+    let callMarker = isCallTimeout ? 'url(#arrow-timeout)' : (isSelected ? 'url(#arrow-active)' : 'url(#arrow)');
+
+    const reqTextColor = isCallTimeout ? '#ef4444' : sanitizeColor(m.textColor, '#1e293b');
+    const reqHighlight = getHighlightConfig(m.highlight || 'none');
+
+    svg += `<g class="clickable" onclick="selectItem('message', '${m.id}'); event.stopPropagation();">`;
+
+    if (m.from === m.to) {
+      const loopWidth = 40;
+      const loopHeight = 22;
+      const pathD = `M ${x1} ${y} L ${x1 + loopWidth} ${y} L ${x1 + loopWidth} ${y + loopHeight} L ${x1 + 6} ${y + loopHeight}`;
+
+      if (isSelected) {
+        svg += `<path d="${pathD}" stroke="#93c5fd" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.75"/>`;
+      }
+
+      svg += `
+        <path d="${pathD}" class="wire" stroke="${callColor}" stroke-width="${isSelected ? 2.5 : 1.5}" marker-end="${callMarker}" ${m.type === 'async' ? 'stroke-dasharray="6 4"' : ''}/>
+        <path d="${pathD}" class="hit-target"/>
+      `;
+
+      if (m.label) {
+        const labelW = measureCtx.measureText(m.label).width + 8;
+        if (reqHighlight.id !== 'none') {
+          svg += `<rect x="${x1 + loopWidth + 5}" y="${y - 1}" width="${labelW}" height="14" rx="3" fill="${reqHighlight.fill}" stroke="${reqHighlight.border}" stroke-width="0.8"/>`;
+        }
+        svg += `<text class="t-label" x="${x1 + loopWidth + 8}" y="${y + 10}" fill="${reqTextColor}" text-anchor="start">${esc(m.label)}</text>`;
+      }
+
+      const apiW = measureCtx.measureText(m.name).width + 8;
+      if (reqHighlight.id !== 'none' && !m.label) {
+        svg += `<rect x="${x1 + loopWidth + 5}" y="${y + 11}" width="${apiW}" height="14" rx="3" fill="${reqHighlight.fill}" stroke="${reqHighlight.border}" stroke-width="0.8"/>`;
+      }
+      svg += `<text class="t-api" x="${x1 + loopWidth + 8}" y="${y + 22}" fill="${reqTextColor}" text-anchor="start">${esc(m.name)}</text>`;
+
+      if (m.reqNote) {
+        svg += buildNoteMarkup(m.reqNote, m.reqNoteSide || 'left', y + loopHeight / 2, x1, x1 + loopWidth + 10);
+      }
+    } 
+    else if (m.type === 'reply_only') {
+      const fw = x2 >= x1;
+      const sx = x1 + (fw ? 5 : -5);
+      const ex = x2 + (fw ? -7 : 7);
+      const mid = (x1 + x2) / 2;
+
+      if (isSelected) {
+        svg += `<line x1="${sx}" y1="${y}" x2="${ex}" y2="${y}" stroke="#93c5fd" stroke-width="5" stroke-linecap="round" opacity="0.75"/>`;
+      }
+
+      svg += `
+        <circle cx="${x1}" cy="${y}" r="3.5" class="pin-node"/>
+        <line class="wire ${isCallTimeout ? 'wire-timeout' : ''}" x1="${sx}" y1="${y}" x2="${ex}" y2="${y}" marker-end="${callMarker}" stroke="${callColor}" stroke-width="${isSelected ? 2.5 : 1.5}" stroke-dasharray="5 4"/>
+        <line class="hit-target" x1="${sx}" y1="${y}" x2="${ex}" y2="${y}"/>
+        <circle cx="${x2}" cy="${y}" r="3.5" class="pin-node"/>
+      `;
+
+      if (m.label) {
+        const labelW = measureCtx.measureText(m.label).width + 10;
+        if (reqHighlight.id !== 'none') {
+          svg += `<rect x="${mid - labelW / 2}" y="${y - 30}" width="${labelW}" height="15" rx="3" fill="${reqHighlight.fill}" stroke="${reqHighlight.border}" stroke-width="0.8"/>`;
+        }
+        svg += `<text class="${isCallTimeout ? 't-timeout' : 't-label'}" x="${mid}" y="${y - 18}" fill="${reqTextColor}" text-anchor="middle">${esc(m.label)}</text>`;
+      }
+
+      const nameW = measureCtx.measureText(m.name).width + 10;
+      if (reqHighlight.id !== 'none') {
+        svg += `<rect x="${mid - nameW / 2}" y="${y - 16}" width="${nameW}" height="14" rx="3" fill="${reqHighlight.fill}" stroke="${reqHighlight.border}" stroke-width="0.8"/>`;
+      }
+      svg += `<text class="${isCallTimeout ? 't-timeout' : 't-api'}" x="${mid}" y="${y - 5}" fill="${reqTextColor}" text-anchor="middle">${esc(m.name)}</text>`;
+
+      if (m.reqNote) {
+        svg += buildNoteMarkup(m.reqNote, m.reqNoteSide || 'right', y, x1, x2);
+      }
+    } 
+    else {
+      const fw = x2 >= x1;
+      const sx = x1 + (fw ? 5 : -5);
+      const ex = x2 + (fw ? -7 : 7);
+      const mid = (x1 + x2) / 2;
+
+      if (isSelected) {
+        svg += `<line x1="${sx}" y1="${y}" x2="${ex}" y2="${y}" stroke="#93c5fd" stroke-width="5" stroke-linecap="round" opacity="0.75"/>`;
+      }
+
+      svg += `
+        <circle cx="${x1}" cy="${y}" r="3.5" class="pin-node"/>
+        <line class="wire ${isCallTimeout ? 'wire-timeout' : ''}" x1="${sx}" y1="${y}" x2="${ex}" y2="${y}" marker-end="${callMarker}" stroke="${callColor}" stroke-width="${isSelected ? 2.5 : 1.5}" ${m.type === 'async' ? 'stroke-dasharray="6 4"' : ''}/>
+        <line class="hit-target" x1="${sx}" y1="${y}" x2="${ex}" y2="${y}"/>
+        <circle cx="${x2}" cy="${y}" r="3.5" class="pin-node"/>
+      `;
+
+      if (m.label) {
+        const labelW = measureCtx.measureText(m.label).width + 10;
+        if (reqHighlight.id !== 'none') {
+          svg += `<rect x="${mid - labelW / 2}" y="${y - 30}" width="${labelW}" height="15" rx="3" fill="${reqHighlight.fill}" stroke="${reqHighlight.border}" stroke-width="0.8"/>`;
+        }
+        svg += `<text class="${isCallTimeout ? 't-timeout' : 't-label'}" x="${mid}" y="${y - 18}" fill="${reqTextColor}" text-anchor="middle">${esc(m.label)}</text>`;
+      }
+
+      const nameW = measureCtx.measureText(m.name).width + 10;
+      if (reqHighlight.id !== 'none') {
+        svg += `<rect x="${mid - nameW / 2}" y="${y - 16}" width="${nameW}" height="14" rx="3" fill="${reqHighlight.fill}" stroke="${reqHighlight.border}" stroke-width="0.8"/>`;
+      }
+      svg += `<text class="${isCallTimeout ? 't-timeout' : 't-api'}" x="${mid}" y="${y - 5}" fill="${reqTextColor}" text-anchor="middle">${esc(m.name)}</text>`;
+
+      // ★ 繪製跨節點一般通訊連線的傳入備註
+      if (m.reqNote) {
+        svg += buildNoteMarkup(m.reqNote, m.reqNoteSide || 'left', y, x1, x2);
+      }
+
+      if (m.reply) {
+        const hasReplyText = Boolean(m.replyName && m.replyName.trim());
+        const replyOffset = hasReplyText ? 34 : 20;
+        const replyY = y + replyOffset;
+        const replyColor = isReplyTimeout ? '#ef4444' : (isSelected ? '#2563eb' : '#64748b');
+        const replyMarker = isReplyTimeout ? 'url(#arrow-timeout)' : (isSelected ? 'url(#arrow-active)' : 'url(#arrow)');
+
+        if (isSelected) {
+          svg += `<line x1="${x2 + (fw ? -5 : 5)}" y1="${replyY}" x2="${x1 + (fw ? 7 : -7)}" y2="${replyY}" stroke="#93c5fd" stroke-width="5" stroke-linecap="round" opacity="0.75"/>`;
+        }
+
+        svg += `
+          <line class="wire ${isReplyTimeout ? 'wire-timeout' : ''}" x1="${x2 + (fw ? -5 : 5)}" y1="${replyY}" x2="${x1 + (fw ? 7 : -7)}" y2="${replyY}" marker-end="${replyMarker}" stroke-dasharray="5 4" stroke="${replyColor}" stroke-width="${isSelected ? 2.5 : 1.5}"/>
+          <line class="hit-target" x1="${x2}" y1="${replyY}" x2="${x1}" y2="${replyY}"/>
+        `;
+
+        if (hasReplyText) {
+          if (m.replyHighlight && m.replyHighlight !== 'none') {
+            const repW = measureCtx.measureText(m.replyName).width + 10;
+            svg += `<rect x="${mid - repW / 2}" y="${replyY - 17}" width="${repW}" height="14" rx="3" fill="#bae6fd" stroke="#38bdf8" stroke-width="0.8"/>`;
+          }
+          svg += `<text class="${isReplyTimeout ? 't-timeout' : 't-label'}" x="${mid}" y="${replyY - 6}" fill="${isReplyTimeout ? '#ef4444' : '#1e293b'}" text-anchor="middle">${esc(m.replyName)}</text>`;
+        }
+
+        // ★ 繪製跨節點一般通訊連線的回傳備註
+        if (m.resNote) {
+          svg += buildNoteMarkup(m.resNote, m.resNoteSide || 'right', replyY, x1, x2);
+        }
+      }
+    }
+
+    svg += `</g>`;
+  });
+
+  if (hasFooterNote) {
+    const fnWidth = Math.min(totalWidth - 80, Math.max(380, calculateExactTextWidth(state.footerNote) + 50));
+    const fnHeight = footerExtraH;
+    const fnX = (totalWidth - fnWidth) / 2;
+    const fnY = lifelineBottom + 12;
+    const fnLineHeight = 18;
+    const fnStartTextY = fnY + (fnHeight / 2) - ((footerLines.length - 1) * fnLineHeight / 2) + 4;
+    const textLeftX = fnX + 22;
+
+    svg += `
+      <g class="clickable" onclick="selectItem('global'); event.stopPropagation();">
+        <rect x="${fnX}" y="${fnY}" width="${fnWidth}" height="${fnHeight}" rx="7" fill="#fffdf0" stroke="#eab308" stroke-width="1.2"/>
+        <rect x="${fnX}" y="${fnY}" width="${fnWidth}" height="${fnHeight}" rx="7" fill="url(#yellowHatchPattern)"/>
+        ${footerLines.map((l, i) => `
+          <text class="t-footer-note" x="${textLeftX}" y="${fnStartTextY + i * fnLineHeight}" text-anchor="start">${esc(l)}</text>
+        `).join('')}
+      </g>
+    `;
+  }
+
+  const dom = $('#diagramSvg');
+  dom.setAttribute('viewBox', `0 0 ${totalWidth} ${totalHeight}`);
+  dom.setAttribute('width', totalWidth);
+  dom.setAttribute('height', totalHeight);
+  dom.innerHTML = svg;
+}
+
+/** 拖曳排序管理模組 **/
+let dragSourceType = null;
+let dragSourceId = null;
+
+function setupDragEvents(element, type, id) {
+  element.setAttribute('draggable', 'true');
+
+  element.addEventListener('dragstart', e => {
+    dragSourceType = type;
+    dragSourceId = id;
+    element.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', id);
+  });
+
+  element.addEventListener('dragend', () => {
+    element.classList.remove('dragging');
+    document.querySelectorAll('.tree-item').forEach(el => {
+      el.classList.remove('drag-over-up', 'drag-over-down');
+    });
+    dragSourceType = null;
+    dragSourceId = null;
+  });
+
+  element.addEventListener('dragover', e => {
+    if (dragSourceType !== type || dragSourceId === id) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+
+    const rect = element.getBoundingClientRect();
+    const isUpper = e.clientY < rect.top + rect.height / 2;
+    if (isUpper) {
+      element.classList.add('drag-over-up');
+      element.classList.remove('drag-over-down');
+    } else {
+      element.classList.add('drag-over-down');
+      element.classList.remove('drag-over-up');
+    }
+  });
+
+  element.addEventListener('dragleave', () => {
+    element.classList.remove('drag-over-up', 'drag-over-down');
+  });
+
+  element.addEventListener('drop', e => {
+    if (dragSourceType !== type || dragSourceId === id) return;
+    e.preventDefault();
+    element.classList.remove('drag-over-up', 'drag-over-down');
+
+    const rect = element.getBoundingClientRect();
+    const isUpper = e.clientY < rect.top + rect.height / 2;
+
+    pushHistoryDirect();
+    const state = getState();
+
+    if (type === 'node') {
+      const fromIdx = state.nodes.findIndex(n => n.id === dragSourceId);
+      const toIdx = state.nodes.findIndex(n => n.id === id);
+      if (fromIdx === -1 || toIdx === -1) return;
+
+      const [removed] = state.nodes.splice(fromIdx, 1);
+      let targetIdx = toIdx;
+      if (fromIdx < toIdx && isUpper) targetIdx--;
+      if (fromIdx > toIdx && !isUpper) targetIdx++;
+      state.nodes.splice(targetIdx, 0, removed);
+    } else if (type === 'message') {
+      const fromIdx = state.messages.findIndex(m => m.id === dragSourceId);
+      const toIdx = state.messages.findIndex(m => m.id === id);
+      if (fromIdx === -1 || toIdx === -1) return;
+
+      const [removed] = state.messages.splice(fromIdx, 1);
+      let targetIdx = toIdx;
+      if (fromIdx < toIdx && isUpper) targetIdx--;
+      if (fromIdx > toIdx && !isUpper) targetIdx++;
+      state.messages.splice(targetIdx, 0, removed);
+    }
+
+    renderCanvas();
+    renderTrees();
+  });
+}
+
+/** 渲染左側樹狀列表 **/
+function renderTrees() {
+  if (treeRenderTimer) {
+    clearTimeout(treeRenderTimer);
+    treeRenderTimer = null;
+  }
+
+  const state = getState();
+  const currentSelection = getSelection();
+  const nodeContainer = $('#nodeTreeList');
+  nodeContainer.innerHTML = state.nodes.map((n, i) => `
+    <div class="tree-item ${currentSelection.type === 'node' && currentSelection.id === n.id ? 'active' : ''}" data-node-id="${n.id}">
+      <span class="drag-handle" title="按住拖曳上下調整順序">⋮⋮</span>
+      <span class="item-color-tag" style="background:${sanitizeColor(n.fill)}; border:2px solid ${sanitizeColor(n.stroke)}"></span>
+      <span class="name">${i + 1}. ${esc(n.name)}</span>
+      <div class="tree-ops" onclick="event.stopPropagation()">
+        <button class="tree-btn" style="padding: 2px 5px;" onclick="moveNode('${n.id}', -1)">↑</button>
+        <button class="tree-btn" style="padding: 2px 5px;" onclick="moveNode('${n.id}', 1)">↓</button>
+        <button class="tree-btn" style="padding: 2px 5px;" onclick="deleteNode('${n.id}')">✕</button>
+      </div>
+    </div>
+  `).join('') || '<div style="font-size:12px;color:var(--text-dim);padding:2px">尚未建立節點</div>';
+
+  nodeContainer.querySelectorAll('.tree-item').forEach(item => {
+    const id = item.dataset.nodeId;
+    setupDragEvents(item, 'node', id);
+    item.addEventListener('click', () => {
+      selectItem('node', id);
+      if ($('#rightPane').classList.contains('collapsed')) toggleRightSidebar(false);
+    });
+  });
+
+  const msgContainer = $('#msgTreeList');
+  msgContainer.innerHTML = state.messages.map((m, i) => {
+    if (m.type === 'note_over') {
+      const displayTitle = m.spanTitle ? m.spanTitle.trim() : '（空白說明框）';
+      return `
+        <div class="tree-item ${currentSelection.type === 'message' && currentSelection.id === m.id ? 'active' : ''}" data-msg-id="${m.id}" style="border-left: 3px solid #eab308;">
+          <span class="drag-handle" title="按住拖曳上下調整順序">⋮⋮</span>
+          <span style="font-size:10px; padding:1px 4px; border-radius:3px; background:#fef08a33; color:#fde047; font-weight:700; flex-shrink: 0;">區間</span>
+          <span class="name" style="color:#fef08a; font-weight:600;">${i + 1}. ${esc(displayTitle)}</span>
+          <div class="tree-ops" onclick="event.stopPropagation()">
+            <button class="tree-btn" style="padding: 2px 5px;" onclick="moveMsg('${m.id}', -1)">↑</button>
+            <button class="tree-btn" style="padding: 2px 5px;" onclick="moveMsg('${m.id}', 1)">↓</button>
+            <button class="tree-btn" style="padding: 2px 5px;" onclick="deleteMsg('${m.id}')">✕</button>
+          </div>
+        </div>
+      `;
+    }
+
+    if (m.type === 'alt_frame') {
+      const cond = m.condition ? m.condition.trim() : '條件未命名';
+      return `
+        <div class="tree-item ${currentSelection.type === 'message' && currentSelection.id === m.id ? 'active' : ''}" data-msg-id="${m.id}" style="border-left: 3px solid #a855f7;">
+          <span class="drag-handle" title="按住拖曳上下調整順序">⋮⋮</span>
+          <span style="font-size:10px; padding:1px 4px; border-radius:3px; background:#a855f733; color:#d8b4fe; font-weight:700; flex-shrink: 0;">Alt</span>
+          <span class="name" style="color:#d8b4fe; font-weight:600;">${i + 1}. [alt: ${esc(cond)}]</span>
+          <div class="tree-ops" onclick="event.stopPropagation()">
+            <button class="tree-btn" style="padding: 2px 5px;" onclick="moveMsg('${m.id}', -1)">↑</button>
+            <button class="tree-btn" style="padding: 2px 5px;" onclick="moveMsg('${m.id}', 1)">↓</button>
+            <button class="tree-btn" style="padding: 2px 5px;" onclick="deleteMsg('${m.id}')">✕</button>
+          </div>
+        </div>
+      `;
+    }
+
+    const isSelf = m.from === m.to;
+    const isReplyOnly = m.type === 'reply_only';
+    const isTimeout = m.status === 'timeout' || m.replyStatus === 'timeout';
+
+    let tagText = isSelf ? '內部' : (isReplyOnly ? '回傳' : '跨節點');
+    let tagBg = isSelf ? '#3b82f633' : (isReplyOnly ? '#10b98133' : '#64748b33');
+    let tagColor = isSelf ? '#93c5fd' : (isReplyOnly ? '#6ee7b7' : '#cbd5e1');
+
+    if (isTimeout) {
+      tagText = '逾時';
+      tagBg = '#ef444433';
+      tagColor = '#fca5a5';
+    }
+
+    const displayTitle = (m.label || m.name || '').replace(/^\d+\.\s*/, '');
+    return `
+      <div class="tree-item ${currentSelection.type === 'message' && currentSelection.id === m.id ? 'active' : ''}" data-msg-id="${m.id}">
+        <span class="drag-handle" title="按住拖曳上下調整順序">⋮⋮</span>
+        <span style="font-size:10.5px; padding:1px 4px; border-radius:3px; background:${tagBg}; color:${tagColor}; font-weight: 600; flex-shrink: 0;">
+          ${tagText}
+        </span>
+        <span class="name">${i + 1}. ${esc(displayTitle)}</span>
+        <div class="tree-ops" onclick="event.stopPropagation()">
+          <button class="tree-btn" style="padding: 2px 5px;" onclick="moveMsg('${m.id}', -1)">↑</button>
+          <button class="tree-btn" style="padding: 2px 5px;" onclick="moveMsg('${m.id}', 1)">↓</button>
+          <button class="tree-btn" style="padding: 2px 5px;" onclick="deleteMsg('${m.id}')">✕</button>
+        </div>
+      </div>
+    `;
+  }).join('') || '<div style="font-size:12px;color:var(--text-dim);padding:2px">尚未建立歷程</div>';
+
+  msgContainer.querySelectorAll('.tree-item').forEach(item => {
+    const id = item.dataset.msgId;
+    setupDragEvents(item, 'message', id);
+    item.addEventListener('click', () => {
+      selectItem('message', id);
+      if ($('#rightPane').classList.contains('collapsed')) toggleRightSidebar(false);
+    });
+  });
+}
+
+function buildColorSelectOptions(currentColor) {
+  let matched = false;
+  let html = '';
+  PRESET_TEXT_COLORS.forEach(c => {
+    if (c.val === 'custom') return;
+    const isSel = (c.val.toLowerCase() === currentColor.toLowerCase());
+    if (isSel) matched = true;
+    html += `<option value="${c.val}" ${isSel ? 'selected' : ''}>${c.label}</option>`;
+  });
+  html += `<option value="custom" ${!matched ? 'selected' : ''}>自訂顏色...</option>`;
+  return html;
+}
+
+function buildHighlightSelectOptions(currentHighlightId) {
+  return HIGHLIGHT_PRESETS.map(h => `
+    <option value="${h.id}" ${(h.id === currentHighlightId) ? 'selected' : ''}>${h.label}</option>
+  `).join('');
+}
+
+/** 渲染右側檢查器 Inspector **/
+function renderInspector() {
+  const state = getState();
+  const currentSelection = getSelection();
+  const container = $('#inspectorContent');
+  const title = $('#inspectorTitle');
+  const returnBtn = $('#inspectorGlobalBtn');
+
+  if (currentSelection.type === 'global') {
+    title.textContent = '全域設定';
+    returnBtn.style.display = 'none';
+
+    container.innerHTML = `
+      <div class="field-group">
+        <label>流程圖主標題名稱</label>
+        <input type="text" id="inpTitle" value="${esc(state.title)}" placeholder="輸入時序圖標題（選填）">
+      </div>
+      <div class="field-group">
+        <label>底部整體備註 (選填 - 文字靠左排版)</label>
+        <textarea id="inpFooterNote" placeholder="輸入整個流程圖的底部說明/總結（選填）">${esc(state.footerNote || '')}</textarea>
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label>節點基本間隔 (px)</label>
+          <input type="number" id="inpNodeGap" value="${state.nodeGap}" min="140" max="500">
+        </div>
+        <div class="field-group">
+          <label>步驟高度 (px)</label>
+          <input type="number" id="inpStepGap" value="${state.stepGap}" min="50" max="300">
+        </div>
+      </div>
+    `;
+
+    $('#inpTitle').oninput = e => { beginDebouncedHistory(); state.title = e.target.value; debouncedRenderCanvas(); };
+    $('#inpFooterNote').oninput = e => { beginDebouncedHistory(); state.footerNote = e.target.value; debouncedRenderCanvas(); };
+    $('#inpNodeGap').oninput = e => { beginDebouncedHistory(); state.nodeGap = Number(e.target.value) || 200; debouncedRenderCanvas(); };
+    $('#inpStepGap').oninput = e => { beginDebouncedHistory(); state.stepGap = Number(e.target.value) || 100; debouncedRenderCanvas(); };
+    return;
+  }
+
+  returnBtn.style.display = 'inline-flex';
+
+  if (currentSelection.type === 'node') {
+    const node = state.nodes.find(n => n.id === currentSelection.id);
+    if (!node) { selectItem('global'); return; }
+
+    title.textContent = '節點屬性';
+    container.innerHTML = `
+      <div class="field-group">
+        <label>節點顯示名稱</label>
+        <input type="text" id="inpNodeName" value="${esc(node.name)}">
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label>底色</label>
+          <input type="color" id="inpNodeFill" value="${sanitizeColor(node.fill, '#eef5ff')}">
+        </div>
+        <div class="field-group">
+          <label>框線色</label>
+          <input type="color" id="inpNodeStroke" value="${sanitizeColor(node.stroke, '#2563eb')}">
+        </div>
+      </div>
+      <div class="field-group">
+        <label>推薦主題配色</label>
+        <div class="palette" id="paletteBox">
+          <div class="swatch" data-f="#eef5ff" data-s="#2563eb" style="background:#eef5ff;border-color:#2563eb;" title="深藍"></div>
+          <div class="swatch" data-f="#ecfdf5" data-s="#059669" style="background:#ecfdf5;border-color:#059669;" title="翠綠"></div>
+          <div class="swatch" data-f="#fffbeb" data-s="#d97706" style="background:#fffbeb;border-color:#d97706;" title="琥珀黃"></div>
+          <div class="swatch" data-f="#fef2f2" data-s="#dc2626" style="background:#fef2f2;border-color:#dc2626;" title="赤紅"></div>
+          <div class="swatch" data-f="#f5f3ff" data-s="#7c3aed" style="background:#f5f3ff;border-color:#7c3aed;" title="青蓮紫"></div>
+          <div class="swatch" data-f="#f8fafc" data-s="#64748b" style="background:#f8fafc;border-color:#64748b;" title="岩灰"></div>
+        </div>
+      </div>
+      <div style="margin-top: 6px;">
+        <button class="btn danger" style="width: 100%; height: 30px;" onclick="deleteNode('${node.id}')">刪除此節點</button>
+      </div>
+    `;
+
+    $('#inpNodeName').oninput = e => { beginDebouncedHistory(); node.name = e.target.value; debouncedRenderCanvas(); debouncedRenderTrees(); };
+    $('#inpNodeFill').oninput = e => { beginDebouncedHistory(); node.fill = sanitizeColor(e.target.value); debouncedRenderCanvas(); debouncedRenderTrees(); };
+    $('#inpNodeStroke').oninput = e => { beginDebouncedHistory(); node.stroke = sanitizeColor(e.target.value); debouncedRenderCanvas(); };
+
+    $('#paletteBox').onclick = e => {
+      const sw = e.target.closest('.swatch');
+      if (!sw) return;
+      pushHistoryDirect();
+      node.fill = sw.dataset.f;
+      node.stroke = sw.dataset.s;
+      $('#inpNodeFill').value = node.fill;
+      $('#inpNodeStroke').value = node.stroke;
+      renderCanvas();
+      renderTrees();
+    };
+    return;
+  }
+
+  if (currentSelection.type === 'message') {
+    const msg = state.messages.find(m => m.id === currentSelection.id);
+    if (!msg) { selectItem('global'); return; }
+
+    const options = state.nodes.map(n => `<option value="${n.id}">${esc(n.name)}</option>`).join('');
+
+    // Alt 面板
+    if (msg.type === 'alt_frame') {
+      title.textContent = '條件判斷 (Alt)';
+      container.innerHTML = `
+        <div class="field-group" style="background:rgba(168, 85, 247, 0.12); padding:10px; border-radius:6px; border:1px solid rgba(168, 85, 247, 0.4);">
+          <label style="color:#d8b4fe; font-weight:700;">★ 判斷條件描述 (Condition)</label>
+          <input type="text" id="inpAltCond" value="${esc(msg.condition || '')}" placeholder="例如：餘額充足">
+        </div>
+
+        <div class="field-row">
+          <div class="field-group">
+            <label>相關起點節點 (From)</label>
+            <select id="inpAltFrom">${options}</select>
+          </div>
+          <div class="field-group">
+            <label>相關終點節點 (To)</label>
+            <select id="inpAltTo">${options}</select>
+          </div>
+        </div>
+
+        <div class="opt-box" style="border-left: 3px solid #22c55e;">
+          <label style="color:#4ade80; font-weight:700;">✔ 符合條件時 (IF 區段)</label>
+          <div class="field-group">
+            <label style="font-size:11px;">發送請求動作 (A -> B)</label>
+            <input type="text" id="inpAltIfAction" value="${esc(msg.ifAction || '')}" placeholder="例如：扣款請求">
+          </div>
+          <div class="field-group">
+            <label style="font-size:11px;">成功回傳動作 (B -->> A，選填)</label>
+            <input type="text" id="inpAltIfReply" value="${esc(msg.ifReply || '')}" placeholder="例如：扣款成功 (200 OK)">
+          </div>
+        </div>
+
+        <div class="opt-box" style="border-left: 3px solid #ef4444;">
+          <label style="color:#f87171; font-weight:700;">✖ 條件不符時 (ELSE 區段)</label>
+          <div class="field-group">
+            <label style="font-size:11px;">ELSE 條件說明 (選填)</label>
+            <input type="text" id="inpAltElseCond" value="${esc(msg.elseCondition || '')}" placeholder="例如：餘額不足">
+          </div>
+          <div class="field-group">
+            <label style="font-size:11px;">失敗響應動作 (B -->> A)</label>
+            <input type="text" id="inpAltElseAction" value="${esc(msg.elseAction || '')}" placeholder="例如：扣款失敗 (400 Bad Request)">
+          </div>
+          <div class="field-group" style="margin-top:2px;">
+            <label style="font-size:11px;">ELSE 響應狀態</label>
+            <select id="selAltElseStatus">
+              <option value="timeout" ${msg.elseStatus === 'timeout' ? 'selected' : ''}>🔴 異常 / 逾時 (紅色虛線)</option>
+              <option value="normal" ${msg.elseStatus !== 'timeout' ? 'selected' : ''}>正常回傳 (灰色虛線)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top: 10px;">
+          <button class="btn danger" style="width: 100%; height: 32px;" onclick="deleteMsg('${msg.id}')">刪除此條件判斷</button>
+        </div>
+      `;
+
+      $('#inpAltCond').oninput = e => { beginDebouncedHistory(); msg.condition = e.target.value; debouncedRenderCanvas(); debouncedRenderTrees(); };
+      $('#inpAltFrom').value = msg.spanFrom || (state.nodes[0] ? state.nodes[0].id : '');
+      $('#inpAltTo').value = msg.spanTo || (state.nodes[1] ? state.nodes[1].id : (state.nodes[0] ? state.nodes[0].id : ''));
+      $('#inpAltFrom').onchange = e => { pushHistoryDirect(); msg.spanFrom = e.target.value; renderCanvas(); };
+      $('#inpAltTo').onchange = e => { pushHistoryDirect(); msg.spanTo = e.target.value; renderCanvas(); };
+
+      $('#inpAltIfAction').oninput = e => { beginDebouncedHistory(); msg.ifAction = e.target.value; debouncedRenderCanvas(); };
+      $('#inpAltIfReply').oninput = e => { beginDebouncedHistory(); msg.ifReply = e.target.value; debouncedRenderCanvas(); };
+      $('#inpAltElseCond').oninput = e => { beginDebouncedHistory(); msg.elseCondition = e.target.value; debouncedRenderCanvas(); };
+      $('#inpAltElseAction').oninput = e => { beginDebouncedHistory(); msg.elseAction = e.target.value; debouncedRenderCanvas(); };
+      $('#selAltElseStatus').onchange = e => { pushHistoryDirect(); msg.elseStatus = e.target.value; renderCanvas(); };
+      return;
+    }
+
+    // Note Over 面板
+    if (msg.type === 'note_over') {
+      title.textContent = '區間說明屬性';
+      const curFill = sanitizeColor(msg.fill, '#fef08a');
+      const curStroke = sanitizeColor(msg.stroke, '#ca8a04');
+      const curTextColor = sanitizeColor(msg.textColor, '#1e293b');
+
+      container.innerHTML = `
+        <div class="field-group" style="background:rgba(254, 240, 138, 0.12); padding:10px; border-radius:6px; border:1px solid rgba(234, 179, 8, 0.4);">
+          <label style="color:#fde047; font-weight:700;">工作階段區間說明 (Note Over)</label>
+          <input type="text" id="inpSpanTitle" value="${esc(msg.spanTitle)}" placeholder="請輸入說明文字 (留空則為空白方塊)">
+        </div>
+
+        <div class="field-row">
+          <div class="field-group">
+            <label>區間起點節點 (From)</label>
+            <select id="inpSpanFrom">${options}</select>
+          </div>
+          <div class="field-group">
+            <label>區間終點節點 (To)</label>
+            <select id="inpSpanTo">${options}</select>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field-group">
+            <label>底色</label>
+            <input type="color" id="inpSpanFill" value="${curFill}">
+          </div>
+          <div class="field-group">
+            <label>框線色</label>
+            <input type="color" id="inpSpanStroke" value="${curStroke}">
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label>文字色彩</label>
+          <div style="display:flex; gap:4px; align-items:center;">
+            <select id="selSpanTextColor" style="flex:1;">${buildColorSelectOptions(curTextColor)}</select>
+            <input type="color" id="pickerSpanTextColor" value="${curTextColor}" style="width:34px; padding:2px; height:32px; cursor:pointer;" title="自訂顏色">
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label>推薦主題配色</label>
+          <div class="palette" id="spanPaletteBox">
+            <div class="swatch" data-f="#fef08a" data-s="#ca8a04" data-t="#1e293b" style="background:#fef08a; border-color:#ca8a04;" title="經典亮黃"></div>
+            <div class="swatch" data-f="#bae6fd" data-s="#0284c7" data-t="#0369a1" style="background:#bae6fd; border-color:#0284c7;" title="天空淡藍"></div>
+            <div class="swatch" data-f="#bbf7d0" data-s="#16a34a" data-t="#15803d" style="background:#bbf7d0; border-color:#16a34a;" title="薄荷淡綠"></div>
+            <div class="swatch" data-f="#fbcfe8" data-s="#db2777" data-t="#be185d" style="background:#fbcfe8; border-color:#db2777;" title="珊瑚淡粉"></div>
+            <div class="swatch" data-f="#ddd6fe" data-s="#7c3aed" data-t="#6d28d9" style="background:#ddd6fe; border-color:#7c3aed;" title="薰衣草紫"></div>
+            <div class="swatch" data-f="#f1f5f9" data-s="#64748b" data-t="#1e293b" style="background:#f1f5f9; border-color:#64748b;" title="簡約淺灰"></div>
+          </div>
+        </div>
+
+        <div style="margin-top: 10px;">
+          <button class="btn danger" style="width: 100%; height: 32px;" onclick="deleteMsg('${msg.id}')">刪除此區間說明</button>
+        </div>
+      `;
+
+      $('#inpSpanTitle').oninput = e => {
+        beginDebouncedHistory();
+        msg.spanTitle = e.target.value;
+        debouncedRenderCanvas();
+        debouncedRenderTrees();
+      };
+      $('#inpSpanFrom').value = msg.spanFrom || (state.nodes[0] ? state.nodes[0].id : '');
+      $('#inpSpanTo').value = msg.spanTo || (state.nodes[1] ? state.nodes[1].id : (state.nodes[0] ? state.nodes[0].id : ''));
+      $('#inpSpanFrom').onchange = e => { pushHistoryDirect(); msg.spanFrom = e.target.value; renderCanvas(); };
+      $('#inpSpanTo').onchange = e => { pushHistoryDirect(); msg.spanTo = e.target.value; renderCanvas(); };
+
+      $('#inpSpanFill').oninput = e => { beginDebouncedHistory(); msg.fill = sanitizeColor(e.target.value); debouncedRenderCanvas(); };
+      $('#inpSpanStroke').oninput = e => { beginDebouncedHistory(); msg.stroke = sanitizeColor(e.target.value); debouncedRenderCanvas(); };
+
+      $('#selSpanTextColor').onchange = e => {
+        pushHistoryDirect();
+        if (e.target.value === 'custom') $('#pickerSpanTextColor').click();
+        else { msg.textColor = e.target.value; $('#pickerSpanTextColor').value = e.target.value; renderCanvas(); }
+      };
+      $('#pickerSpanTextColor').oninput = e => {
+        beginDebouncedHistory();
+        msg.textColor = sanitizeColor(e.target.value);
+        $('#selSpanTextColor').value = 'custom';
+        debouncedRenderCanvas();
+      };
+
+      $('#spanPaletteBox').onclick = e => {
+        const sw = e.target.closest('.swatch');
+        if (!sw) return;
+        pushHistoryDirect();
+        msg.fill = sw.dataset.f;
+        msg.stroke = sw.dataset.s;
+        msg.textColor = sw.dataset.t;
+        $('#inpSpanFill').value = msg.fill;
+        $('#inpSpanStroke').value = msg.stroke;
+        $('#pickerSpanTextColor').value = msg.textColor;
+        renderCanvas();
+      };
+      return;
+    }
+
+    // 標準通訊連線面板
+    const isSelf = msg.from === msg.to;
+    const isReplyOnly = msg.type === 'reply_only';
+    const isTimeout = msg.status === 'timeout';
+    const isReplyTimeout = msg.replyStatus === 'timeout';
+
+    let panelTitle = '跨節點屬性';
+    if (isSelf) panelTitle = '內部操作屬性';
+    else if (isReplyOnly) panelTitle = '獨立回傳屬性';
+
+    const currentReqColor = sanitizeColor(msg.textColor, '#1e293b');
+    const currentReplyColor = sanitizeColor(msg.replyTextColor, '#1e293b');
+    const hasReqColorOrHighlight = (msg.textColor && msg.textColor !== '#1e293b') || (msg.highlight && msg.highlight !== 'none');
+    const hasReqNote = Boolean(msg.reqNote && msg.reqNote.trim());
+    const hasReplyColorOrHighlight = (msg.replyTextColor && msg.replyTextColor !== '#1e293b') || (msg.replyHighlight && msg.replyHighlight !== 'none');
+    const hasResNote = Boolean(msg.resNote && msg.resNote.trim());
+
+    title.textContent = panelTitle;
+    container.innerHTML = `
+      <div class="field-row">
+        <div class="field-group">
+          <label>發送端 (From)</label>
+          <select id="inpMsgFrom">${options}</select>
+        </div>
+        <div class="field-group">
+          <label>接收端 (To)</label>
+          <select id="inpMsgTo">${options}</select>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>${isSelf ? '操作方法 (Method)' : (isReplyOnly ? '回傳標籤 / 狀態碼' : '呼叫方法 / API')}</label>
+        <input type="text" id="inpMsgName" value="${esc(msg.name)}" placeholder="例如：POST /api">
+      </div>
+      <div class="field-group">
+        <label>顯示動作說明 (選填)</label>
+        <input type="text" id="inpMsgLabel" value="${esc(msg.label)}" placeholder="例如：發起預約">
+      </div>
+
+      <div class="field-row">
+        <div class="field-group">
+          <label>連線形式</label>
+          <select id="inpMsgType">
+            <option value="request" ${msg.type === 'request' ? 'selected' : ''}>同步 (實線)</option>
+            <option value="async" ${msg.type === 'async' ? 'selected' : ''}>非同步 (虛線)</option>
+            <option value="reply_only" ${msg.type === 'reply_only' ? 'selected' : ''}>獨立回傳線</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>${isReplyOnly ? '回傳狀態' : '發送狀態'}</label>
+          <select id="inpMsgStatus">
+            <option value="normal" ${!isTimeout ? 'selected' : ''}>正常</option>
+            <option value="timeout" ${isTimeout ? 'selected' : ''}>🔴 逾時 / 異常</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field-group" id="replyToggleGroup" style="display: ${isSelf || isReplyOnly ? 'none' : 'flex'};">
+        <label>附帶即時回傳連線</label>
+        <select id="inpMsgReply">
+          <option value="yes" ${msg.reply ? 'selected' : ''}>有回傳線</option>
+          <option value="no" ${!msg.reply ? 'selected' : ''}>無回傳線</option>
+        </select>
+      </div>
+
+      <details class="foldable-panel" ${hasReqColorOrHighlight ? 'open' : ''}>
+        <summary><span>🎨 傳入文字色彩與標記</span></summary>
+        <div class="foldable-content">
+          <div class="field-group">
+            <label>傳入文字顏色</label>
+            <div style="display:flex; gap:4px; align-items:center;">
+              <select id="selReqTextColor" style="flex:1;">${buildColorSelectOptions(currentReqColor)}</select>
+              <input type="color" id="pickerReqTextColor" value="${currentReqColor}" style="width:34px; padding:2px; height:32px; cursor:pointer;" title="自訂任意顏色">
+            </div>
+          </div>
+          <div class="field-group">
+            <label>傳入重點螢光標記</label>
+            <select id="selReqHighlight">${buildHighlightSelectOptions(msg.highlight || 'none')}</select>
+          </div>
+        </div>
+      </details>
+
+      <details class="foldable-panel" ${hasReqNote ? 'open' : ''}>
+        <summary><span>📝 ${isSelf ? '內部操作備註' : (isReplyOnly ? '回傳備註' : '傳入線備註')}</span></summary>
+        <div class="foldable-content">
+          <div class="field-group">
+            <textarea id="inpReqNote" placeholder="備註說明（選填）">${esc(msg.reqNote || '')}</textarea>
+          </div>
+          <div class="field-group">
+            <label>擺放位置</label>
+            <select id="inpReqNoteSide">
+              <option value="left" ${(msg.reqNoteSide || 'left') === 'left' ? 'selected' : ''}>靠左 (推薦)</option>
+              <option value="right" ${(msg.reqNoteSide || 'left') === 'right' ? 'selected' : ''}>靠右</option>
+            </select>
+          </div>
+        </div>
+      </details>
+
+      <div id="replySubPanel" style="display: ${!isSelf && !isReplyOnly && msg.reply ? 'flex' : 'none'}; flex-direction:column; gap:9px;">
+        <div class="field-row" style="background:rgba(255,255,255,0.02); padding:8px; border-radius:6px; border:1px solid var(--border-subtle);">
+          <div class="field-group">
+            <label>回傳文字</label>
+            <input type="text" id="inpReplyName" value="${esc(msg.replyName || '')}" placeholder="留空則緊縮">
+          </div>
+          <div class="field-group">
+            <label>回傳狀態</label>
+            <select id="inpReplyStatus">
+              <option value="normal" ${!isReplyTimeout ? 'selected' : ''}>正常</option>
+              <option value="timeout" ${isReplyTimeout ? 'selected' : ''}>🔴 逾時</option>
+            </select>
+          </div>
+        </div>
+
+        <details class="foldable-panel" ${hasReplyColorOrHighlight ? 'open' : ''}>
+          <summary><span>🎨 回傳文字色彩與標記</span></summary>
+          <div class="foldable-content">
+            <div class="field-group">
+              <label>回傳文字顏色</label>
+              <div style="display:flex; gap:4px; align-items:center;">
+                <select id="selReplyTextColor" style="flex:1;">${buildColorSelectOptions(currentReplyColor)}</select>
+                <input type="color" id="pickerReplyTextColor" value="${currentReplyColor}" style="width:34px; padding:2px; height:32px; cursor:pointer;" title="自訂任意顏色">
+              </div>
+            </div>
+            <div class="field-group">
+              <label>回傳重點螢光標記</label>
+              <select id="selReplyHighlight">${buildHighlightSelectOptions(msg.replyHighlight || 'none')}</select>
+            </div>
+          </div>
+        </details>
+
+        <details class="foldable-panel" ${hasResNote ? 'open' : ''}>
+          <summary><span>📝 回傳線備註說明</span></summary>
+          <div class="foldable-content">
+            <div class="field-group">
+              <textarea id="inpResNote" placeholder="回傳備註（選填）">${esc(msg.resNote || '')}</textarea>
+            </div>
+            <div class="field-group">
+              <label>回傳備註位置</label>
+              <select id="inpResNoteSide">
+                <option value="right" ${msg.resNoteSide === 'right' ? 'selected' : ''}>靠右</option>
+                <option value="left" ${msg.resNoteSide === 'left' ? 'selected' : ''}>靠左</option>
+              </select>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <div style="margin-top: 6px;">
+        <button class="btn danger" style="width: 100%; height: 30px;" onclick="deleteMsg('${msg.id}')">刪除此項目</button>
+      </div>
+    `;
+
+    $('#inpMsgFrom').value = msg.from;
+    $('#inpMsgTo').value = msg.to;
+    $('#inpMsgFrom').onchange = e => { pushHistoryDirect(); msg.from = e.target.value; renderCanvas(); renderTrees(); renderInspector(); };
+    $('#inpMsgTo').onchange = e => { pushHistoryDirect(); msg.to = e.target.value; renderCanvas(); renderTrees(); renderInspector(); };
+    $('#inpMsgName').oninput = e => { beginDebouncedHistory(); msg.name = e.target.value; debouncedRenderCanvas(); };
+    $('#inpMsgLabel').oninput = e => { beginDebouncedHistory(); msg.label = e.target.value; debouncedRenderCanvas(); };
+    
+    $('#selReqTextColor').onchange = e => {
+      pushHistoryDirect();
+      if (e.target.value === 'custom') $('#pickerReqTextColor').click();
+      else { msg.textColor = e.target.value; $('#pickerReqTextColor').value = e.target.value; renderCanvas(); }
+    };
+    $('#pickerReqTextColor').oninput = e => { beginDebouncedHistory(); msg.textColor = sanitizeColor(e.target.value); $('#selReqTextColor').value = 'custom'; debouncedRenderCanvas(); };
+    $('#selReqHighlight').onchange = e => { pushHistoryDirect(); msg.highlight = e.target.value; renderCanvas(); };
+
+    $('#inpMsgType').onchange = e => {
+      pushHistoryDirect();
+      msg.type = e.target.value;
+      if (msg.type === 'reply_only') msg.reply = false;
+      renderCanvas();
+      renderTrees();
+      renderInspector();
+    };
+
+    $('#inpMsgStatus').onchange = e => { pushHistoryDirect(); msg.status = e.target.value; renderCanvas(); renderTrees(); };
+
+    if (!isSelf && !isReplyOnly) {
+      $('#inpMsgReply').onchange = e => {
+        pushHistoryDirect();
+        msg.reply = e.target.value === 'yes';
+        $('#replySubPanel').style.display = msg.reply ? 'flex' : 'none';
+        renderCanvas();
+      };
+      $('#inpReplyName').oninput = e => { beginDebouncedHistory(); msg.replyName = e.target.value; debouncedRenderCanvas(); };
+      $('#inpReplyStatus').onchange = e => { pushHistoryDirect(); msg.replyStatus = e.target.value; renderCanvas(); };
+
+      $('#selReplyTextColor').onchange = e => {
+        pushHistoryDirect();
+        if (e.target.value === 'custom') $('#pickerReplyTextColor').click();
+        else { msg.replyTextColor = e.target.value; $('#pickerReplyTextColor').value = e.target.value; renderCanvas(); }
+      };
+      $('#pickerReplyTextColor').oninput = e => {
+        beginDebouncedHistory();
+        msg.replyTextColor = sanitizeColor(e.target.value);
+        $('#selReplyTextColor').value = 'custom';
+        debouncedRenderCanvas();
+      };
+
+      $('#selReplyHighlight').onchange = e => {
+        pushHistoryDirect();
+        msg.replyHighlight = e.target.value;
+        renderCanvas();
+      };
+
+      $('#inpResNote').oninput = e => { beginDebouncedHistory(); msg.resNote = e.target.value; debouncedRenderCanvas(); };
+      $('#inpResNoteSide').onchange = e => { pushHistoryDirect(); msg.resNoteSide = e.target.value; debouncedRenderCanvas(); };
+    }
+
+    $('#inpReqNote').oninput = e => { beginDebouncedHistory(); msg.reqNote = e.target.value; debouncedRenderCanvas(); };
+    $('#inpReqNoteSide').onchange = e => { pushHistoryDirect(); msg.reqNoteSide = e.target.value; debouncedRenderCanvas(); };
+  }
+}
+
+function selectItem(type, id = null) {
+  setSelection({ type, id });
+  renderCanvas();
+  renderTrees();
+  renderInspector();
+}
+
+$('#navGlobalSettingsBtn').onclick = () => selectItem('global');
+
+$('#canvasPane').onclick = e => {
+  if (e.target.id === 'canvasPane' || e.target.id === 'artboard') {
+    selectItem('global');
+  }
+};
+
+function moveNode(id, dir) {
+  const state = getState();
+  const i = state.nodes.findIndex(n => n.id === id);
+  const target = i + dir;
+  if (target >= 0 && target < state.nodes.length) {
+    pushHistoryDirect();
+    [state.nodes[i], state.nodes[target]] = [state.nodes[target], state.nodes[i]];
+    renderCanvas();
+    renderTrees();
+  }
+}
+
+/* 僅於刪除節點時進行詢問確認（保護相依流程） */
+function deleteNode(id) {
+  const state = getState();
+  const targetNode = state.nodes.find(n => n.id === id);
+  if (!targetNode) return;
+  const targetName = targetNode.name || '此節點';
+
+  const relatedMsgCount = state.messages.filter(m => {
+    if (m.type === 'note_over' || m.type === 'alt_frame') {
+      return m.spanFrom === id || m.spanTo === id;
+    }
+    return m.from === id || m.to === id;
+  }).length;
+
+  let confirmText = `確定要刪除節點「${targetName}」嗎？`;
+  if (relatedMsgCount > 0) {
+    confirmText = `【刪除提示】\n刪除節點「${targetName}」將會一併移除與其相連的所有 ${relatedMsgCount} 筆通訊流程/歷程！\n\n確定要刪除嗎？`;
+  }
+  if (!confirm(confirmText)) return;
+
+  pushHistoryDirect();
+  state.nodes = state.nodes.filter(n => n.id !== id);
+  cleanOrphanMessages();
+  selectItem('global');
+  showToast(`已刪除節點 ${targetName}`);
+}
+
+function moveMsg(id, dir) {
+  const state = getState();
+  const i = state.messages.findIndex(m => m.id === id);
+  const target = i + dir;
+  if (target >= 0 && target < state.messages.length) {
+    pushHistoryDirect();
+    [state.messages[i], state.messages[target]] = [state.messages[target], state.messages[i]];
+    renderCanvas();
+    renderTrees();
+  }
+}
+
+/* 流程項目直接刪除，不彈窗防打擾 */
+function deleteMsg(id) {
+  const state = getState();
+  pushHistoryDirect();
+  state.messages = state.messages.filter(m => m.id !== id);
+  selectItem('global');
+  showToast('已刪除該流程項目');
+}
+
+$('#addNodeFast').onclick = () => {
+  const state = getState();
+  pushHistoryDirect();
+  const newNode = {
+    id: uid('n'),
+    name: `節點 ${state.nodes.length + 1}`,
+    fill: '#eef5ff',
+    stroke: '#2563eb'
+  };
+  state.nodes.push(newNode);
+  selectItem('node', newNode.id);
+};
+
+function getSmartNodePair() {
+  const state = getState();
+  if (state.nodes.length === 0) return { from: null, to: null };
+  if (state.nodes.length === 1) return { from: state.nodes[0].id, to: state.nodes[0].id };
+
+  const curSel = getSelection();
+  if (curSel.type === 'node' && curSel.id) {
+    const selIdx = state.nodes.findIndex(n => n.id === curSel.id);
+    if (selIdx !== -1) {
+      const fromId = state.nodes[selIdx].id;
+      const toId = (selIdx < state.nodes.length - 1)
+        ? state.nodes[selIdx + 1].id
+        : state.nodes[selIdx - 1].id;
+      return { from: fromId, to: toId };
+    }
+  } else if (curSel.type === 'message' && curSel.id) {
+    const msg = state.messages.find(m => m.id === curSel.id);
+    if (msg) {
+      const mFrom = msg.spanFrom || msg.from;
+      const mTo = msg.spanTo || msg.to;
+      if (mFrom && mTo && state.nodes.some(n => n.id === mFrom) && state.nodes.some(n => n.id === mTo)) {
+        return { from: mFrom, to: mTo };
+      }
+    }
+  }
+
+  return { from: state.nodes[0].id, to: state.nodes[1].id };
+}
+
+$('#addMsgFast').onclick = () => {
+  const state = getState();
+  if (state.nodes.length < 2) return showToast('請先建立至少兩個節點！');
+
+  const pair = getSmartNodePair();
+  pushHistoryDirect();
+  const newMsg = {
+    id: uid('m'),
+    from: pair.from,
+    to: pair.to,
+    name: 'POST /api/v1/action',
+    label: '',
+    textColor: '#1e293b',
+    highlight: 'none',
+    replyTextColor: '#1e293b',
+    replyHighlight: 'none',
+    type: 'request',
+    status: 'normal',
+    reply: true,
+    replyName: '',
+    replyStatus: 'normal',
+    reqNote: '',
+    reqNoteSide: 'left',
+    resNote: '',
+    resNoteSide: 'right'
+  };
+  state.messages.push(newMsg);
+  selectItem('message', newMsg.id);
+};
+
+$('#addSelfActionFast').onclick = () => {
+  const state = getState();
+  const currentSelection = getSelection();
+  if (state.nodes.length < 1) return showToast('請先建立至少一個節點！');
+
+  pushHistoryDirect();
+  const targetNodeId = (currentSelection.type === 'node' && currentSelection.id) 
+    ? currentSelection.id 
+    : state.nodes[0].id;
+
+  const newAction = {
+    id: uid('m'),
+    from: targetNodeId,
+    to: targetNodeId,
+    name: 'handleLocalProcess()',
+    label: '內部操作處理',
+    textColor: '#1e293b',
+    highlight: 'none',
+    replyTextColor: '#1e293b',
+    replyHighlight: 'none',
+    type: 'request',
+    status: 'normal',
+    reply: false,
+    replyName: '',
+    reqNote: '',
+    reqNoteSide: 'left',
+    resNote: '',
+    resNoteSide: 'right'
+  };
+  state.messages.push(newAction);
+  selectItem('message', newAction.id);
+};
+
+$('#addReplyLineFast').onclick = () => {
+  const state = getState();
+  if (state.nodes.length < 2) return showToast('請先建立至少兩個節點！');
+
+  const pair = getSmartNodePair();
+  pushHistoryDirect();
+  const newReply = {
+    id: uid('m'),
+    from: pair.to,
+    to: pair.from,
+    name: 'Response',
+    label: '',
+    textColor: '#1e293b',
+    highlight: 'none',
+    replyTextColor: '#1e293b',
+    replyHighlight: 'none',
+    type: 'reply_only',
+    status: 'normal',
+    reply: false,
+    replyName: '',
+    reqNote: '',
+    reqNoteSide: 'right',
+    resNote: '',
+    resNoteSide: 'right'
+  };
+  state.messages.push(newReply);
+  selectItem('message', newReply.id);
+};
+
+$('#addSpanNoteFast').onclick = () => {
+  const state = getState();
+  if (state.nodes.length < 2) return showToast('請先建立至少兩個節點！');
+
+  const pair = getSmartNodePair();
+  pushHistoryDirect();
+  const newSpanItem = {
+    id: uid('m'),
+    type: 'note_over',
+    spanTitle: '',
+    spanFrom: pair.from,
+    spanTo: pair.to,
+    fill: '#fef08a',
+    stroke: '#ca8a04',
+    textColor: '#1e293b'
+  };
+  state.messages.push(newSpanItem);
+  selectItem('message', newSpanItem.id);
+  showToast('已新增工作階段說明方塊！');
+};
+
+$('#addAltFast').onclick = () => {
+  const state = getState();
+  if (state.nodes.length < 2) return showToast('請先建立至少兩個節點！');
+
+  const pair = getSmartNodePair();
+  pushHistoryDirect();
+  const newAltItem = {
+    id: uid('m'),
+    type: 'alt_frame',
+    condition: '',
+    spanFrom: pair.from,
+    spanTo: pair.to,
+    ifAction: '',
+    ifReply: '',
+    elseCondition: '',
+    elseAction: '',
+    elseStatus: 'timeout'
+  };
+  state.messages.push(newAltItem);
+  selectItem('message', newAltItem.id);
+  showToast('已新增條件判斷分支 (Alt)！');
+};
+
+$('#newCanvasBtn').onclick = () => {
+  if (confirm(`確定清除目前「${getActiveCanvas().name}」畫布的所有內容並重設？`)) {
+    pushHistoryDirect();
+    getActiveCanvas().state = {
+      title: '',
+      footerNote: '',
+      nodeGap: 200,
+      stepGap: 100,
+      nodes: [],
+      messages: []
+    };
+    selectItem('global');
+    scheduleAutoSave();
+  }
+};
+
+function setZoom(val) {
+  zoomScale = Math.min(2.5, Math.max(0.5, Number(val)));
+  $('#artboard').style.transform = `scale(${zoomScale})`;
+  $('#zoomSlider').value = Math.round(zoomScale * 100);
+  $('#zoomPercent').textContent = `${Math.round(zoomScale * 100)}%`;
+}
+
+$('#zoomSlider').oninput = e => setZoom(e.target.value / 100);
+$('#zoomIn').onclick = () => setZoom(zoomScale + 0.1);
+$('#zoomOut').onclick = () => setZoom(zoomScale - 0.1);
+
+function getCleanSvgSource(includeNotes = true) {
+  renderCanvas(includeNotes, true);
+  const clone = $('#diagramSvg').cloneNode(true);
+  clone.querySelectorAll('.hit-target').forEach(e => e.remove());
+  clone.querySelectorAll('.clickable').forEach(e => {
+    e.classList.remove('clickable');
+    e.removeAttribute('onclick');
+  });
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  renderCanvas(true, false);
+  return '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(clone);
+}
+
+function triggerDownload(name, blob) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function generatePngBlob(includeNotes = true) {
+  return new Promise((resolve, reject) => {
+    const svgText = getCleanSvgSource(includeNotes);
+    const blob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+
+    img.onload = () => {
+      const scale = 2;
+      const parser = new DOMParser();
+      const svgDoc = parser.parseFromString(svgText, 'image/svg+xml');
+      const rootSvg = svgDoc.querySelector('svg');
+      const w = parseFloat(rootSvg.getAttribute('width')) || 800;
+      const h = parseFloat(rootSvg.getAttribute('height')) || 600;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(w * scale);
+      canvas.height = Math.round(h * scale);
+      const ctx = canvas.getContext('2d');
+      ctx.scale(scale, scale);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+
+      canvas.toBlob(pngBlob => {
+        URL.revokeObjectURL(url);
+        resolve(pngBlob);
+      }, 'image/png');
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+function generateMermaidCode(includeNotes = true) {
+  const state = getState();
+  const lines = ['sequenceDiagram', '    autonumber'];
+
+  state.nodes.forEach((n, idx) => {
+    lines.push(`    participant N${idx + 1} as ${n.name}`);
+  });
+
+  state.messages.forEach(m => {
+    if (m.type === 'note_over') {
+      if (includeNotes && m.spanTitle && m.spanTitle.trim()) {
+        const sFromIdx = state.nodes.findIndex(n => n.id === m.spanFrom) + 1;
+        const sToIdx = state.nodes.findIndex(n => n.id === m.spanTo) + 1;
+        if (sFromIdx && sToIdx) {
+          lines.push(`    Note over N${sFromIdx},N${sToIdx}: ${m.spanTitle}`);
+        }
+      }
+      return;
+    }
+
+    if (m.type === 'alt_frame') {
+      const sFromIdx = state.nodes.findIndex(n => n.id === m.spanFrom) + 1;
+      const sToIdx = state.nodes.findIndex(n => n.id === m.spanTo) + 1;
+      if (sFromIdx && sToIdx) {
+        lines.push(`    alt ${m.condition || ''}`);
+        if (m.ifAction) lines.push(`        N${sFromIdx}->>N${sToIdx}: ${m.ifAction}`);
+        if (m.ifReply) lines.push(`        N${sToIdx}-->>N${sFromIdx}: ${m.ifReply}`);
+        lines.push(`    else ${m.elseCondition || ''}`);
+        if (m.elseAction) lines.push(`        N${sToIdx}-->>N${sFromIdx}: ${m.elseAction}`);
+        lines.push(`    end`);
+      }
+      return;
+    }
+
+    const fromIdx = state.nodes.findIndex(n => n.id === m.from) + 1;
+    const toIdx = state.nodes.findIndex(n => n.id === m.to) + 1;
+    if (!fromIdx || !toIdx) return;
+
+    const isSelf = m.from === m.to;
+    const isReplyOnly = m.type === 'reply_only';
+    const isTimeout = m.status === 'timeout';
+    const arrow = (m.type === 'async' || isReplyOnly) ? '-->>' : '->>';
+    const labelPrefix = isTimeout ? '[逾時] ' : ((m.highlight && m.highlight !== 'none') ? '[重點] ' : '');
+    const label = labelPrefix + (m.label ? `${m.label}: ` : '') + m.name;
+
+    lines.push(`    N${fromIdx}${arrow}N${toIdx}: ${label}`);
+
+    if (includeNotes && m.reqNote) {
+      const noteSide = m.reqNoteSide || (isSelf ? 'left' : 'left');
+      const targetNode = noteSide === 'left' ? fromIdx : toIdx;
+      lines.push(`    Note ${noteSide} of N${targetNode}: ${m.reqNote.replace(/\n/g, '<br/>')}`);
+    }
+
+    if (!isSelf && !isReplyOnly && m.reply) {
+      const repTimeout = m.replyStatus === 'timeout' ? '[逾時] ' : '';
+      const repHighlight = (m.replyHighlight && m.replyHighlight !== 'none') ? '[重點] ' : '';
+      lines.push(`    N${toIdx}-->>N${fromIdx}: ${repTimeout}${repHighlight}${m.replyName || 'Response'}`);
+      if (includeNotes && m.resNote) {
+        const noteSide = m.resNoteSide || 'right';
+        const targetNode = noteSide === 'left' ? toIdx : fromIdx;
+        lines.push(`    Note ${noteSide} of N${targetNode}: ${m.resNote.replace(/\n/g, '<br/>')}`);
+      }
+    }
+  });
+
+  if (includeNotes && state.footerNote && state.nodes.length > 0) {
+    lines.push(`    Note over N1,N${state.nodes.length}: ${state.footerNote.replace(/\n/g, '<br/>')}`);
+  }
+
+  return lines.join('\n');
+}
+
+/* =========================================================================
+   時序圖轉換為業務流程圖 (Sequence to Flowchart Converter Engine)
+   ★ 兩行式排版：第一行節點通訊、第二行通訊內容
+   ========================================================================= */
+
+function compileSequenceToFlowchart(includeReplies = false) {
+  const state = getState();
+  const nodeMap = new Map();
+  state.nodes.forEach(n => nodeMap.set(n.id, n.name));
+
+  const items = [];
+  let stepCounter = 1;
+
+  state.messages.forEach(m => {
+    if (m.type === 'note_over') {
+      items.push({
+        kind: 'stage',
+        title: m.spanTitle ? m.spanTitle.trim() : '階段說明',
+        color: '#ca8a04',
+        fill: '#fef08a'
+      });
+      return;
+    }
+
+    if (m.type === 'alt_frame') {
+      const fName = nodeMap.get(m.spanFrom) || '來源端';
+      const tName = nodeMap.get(m.spanTo) || '目標端';
+      items.push({
+        kind: 'decision',
+        step: stepCounter++,
+        condition: m.condition ? m.condition.trim() : '檢查條件',
+        ifHeader: `${fName} ➔ ${tName}`,
+        ifContent: m.ifAction ? m.ifAction.trim() : '發送請求',
+        elseCondition: m.elseCondition ? m.elseCondition.trim() : '其他例外',
+        elseHeader: `${tName} ➔ ${fName}`,
+        elseContent: m.elseAction ? m.elseAction.trim() : '失敗響應',
+        elseStatus: m.elseStatus || 'timeout'
+      });
+      return;
+    }
+
+    const fName = nodeMap.get(m.from) || '端點A';
+    const tName = nodeMap.get(m.to) || '端點B';
+    const actionDesc = (m.label ? `【${m.label}】` : '') + (m.name || '通訊');
+
+    if (m.from === m.to) {
+      items.push({
+        kind: 'action',
+        step: stepCounter++,
+        header: `${fName} 內部處理`,
+        content: actionDesc,
+        note: m.reqNote || '',
+        status: m.status
+      });
+    } else if (m.type === 'reply_only') {
+      if (includeReplies) {
+        items.push({
+          kind: 'action',
+          step: stepCounter++,
+          header: `${fName} 回傳 ➔ ${tName}`,
+          content: actionDesc,
+          note: m.reqNote || '',
+          status: m.status
+        });
+      }
+    } else {
+      items.push({
+        kind: 'action',
+        step: stepCounter++,
+        header: `${fName} ➔ ${tName}`,
+        content: actionDesc,
+        note: m.reqNote || '',
+        status: m.status
+      });
+
+      if (includeReplies && m.reply) {
+        items.push({
+          kind: 'action',
+          step: stepCounter++,
+          header: `${tName} 回傳 ➔ ${fName}`,
+          content: m.replyName || '200 OK (完成)',
+          note: m.resNote || '',
+          status: m.replyStatus
+        });
+      }
+    }
+  });
+
+  return {
+    title: state.title || getActiveCanvas().name || '系統互動流程圖',
+    items
+  };
+}
+
+function renderFlowchartToSvg(includeReplies = false) {
+  const model = compileSequenceToFlowchart(includeReplies);
+  const width = 760;
+  const cx = width / 2;
+  let cy = 40;
+
+  let svg = `
+    <defs>
+      <marker id="flowArrow" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+        <path d="M0 0L9 3.5L0 7z" fill="#3b82f6"/>
+      </marker>
+      <marker id="flowArrowErr" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+        <path d="M0 0L9 3.5L0 7z" fill="#ef4444"/>
+      </marker>
+    </defs>
+    <style>
+      .fl-title { font: 800 16px -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; fill: #0f172a; text-anchor: middle; }
+      .fl-header { font: 700 11px -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; fill: #475569; text-anchor: middle; letter-spacing: 0.2px; }
+      .fl-header-err { font: 700 11px -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; fill: #b91c1c; text-anchor: middle; letter-spacing: 0.2px; }
+      .fl-content { font: 600 12.5px -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; fill: #0f172a; text-anchor: middle; }
+      .fl-content-err { font: 600 12.5px -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; fill: #dc2626; text-anchor: middle; }
+      .fl-text { font: 600 12px -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; fill: #1e293b; text-anchor: middle; }
+      .fl-line { stroke: #3b82f6; stroke-width: 1.6; fill: none; }
+      .fl-line-err { stroke: #ef4444; stroke-width: 1.6; stroke-dasharray: 4 3; fill: none; }
+    </style>
+    <rect width="100%" height="100%" fill="#ffffff" rx="6"/>
+    <text class="fl-title" x="${cx}" y="${cy}">${esc(model.title)} - 流程圖</text>
+  `;
+
+  cy += 30;
+
+  // 開始節點
+  svg += `
+    <rect x="${cx - 65}" y="${cy}" width="130" height="34" rx="17" fill="#10b981" stroke="#059669" stroke-width="1.5"/>
+    <text class="fl-text" x="${cx}" y="${cy + 21}" fill="#ffffff" font-weight="700">▶ 開始 (Start)</text>
+  `;
+  cy += 34;
+
+  if (model.items.length === 0) {
+    cy += 40;
+    svg += `
+      <line class="fl-line" x1="${cx}" y1="${cy - 40}" x2="${cx}" y2="${cy}" marker-end="url(#flowArrow)"/>
+      <rect x="${cx - 140}" y="${cy}" width="280" height="46" rx="6" fill="#f8fafc" stroke="#cbd5e1"/>
+      <text class="fl-text" x="${cx}" y="${cy + 28}" fill="#64748b">尚未建立任何時序訊息</text>
+    `;
+    cy += 46;
+  }
+
+  model.items.forEach((item) => {
+    svg += `<line class="fl-line" x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy + 30}" marker-end="url(#flowArrow)"/>`;
+    cy += 30;
+
+    if (item.kind === 'stage') {
+      const boxW = 420;
+      svg += `
+        <rect x="${cx - boxW / 2}" y="${cy}" width="${boxW}" height="32" rx="4" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.2" stroke-dasharray="3 2"/>
+        <text class="fl-text" x="${cx}" y="${cy + 20}" fill="#854d0e" font-weight="700">★ 區間：${esc(item.title)}</text>
+      `;
+      cy += 32;
+    }
+    else if (item.kind === 'action') {
+      const boxW = 460;
+      const boxH = 54;
+      const isErr = item.status === 'timeout';
+      svg += `
+        <rect x="${cx - boxW / 2}" y="${cy}" width="${boxW}" height="${boxH}" rx="6" fill="${isErr ? '#fef2f2' : '#eff6ff'}" stroke="${isErr ? '#ef4444' : '#3b82f6'}" stroke-width="1.4"/>
+        <text class="${isErr ? 'fl-header-err' : 'fl-header'}" x="${cx}" y="${cy + 20}">${esc(item.header)}</text>
+        <text class="${isErr ? 'fl-content-err' : 'fl-content'}" x="${cx}" y="${cy + 39}">${esc(item.content)}</text>
+      `;
+      cy += boxH;
+    }
+    else if (item.kind === 'decision') {
+      const diaW = 100;
+      const diaH = 50;
+      const topY = cy;
+      const midY = cy + diaH / 2;
+      const botY = cy + diaH;
+
+      svg += `
+        <polygon points="${cx},${topY} ${cx + diaW},${midY} ${cx},${botY} ${cx - diaW},${midY}" fill="#f3e8ff" stroke="#a855f7" stroke-width="1.5"/>
+        <text class="fl-text" x="${cx}" y="${midY + 4}" fill="#6b21a8" font-weight="700">是否 [${esc(item.condition)}]？</text>
+      `;
+
+      const branchY = botY + 40;
+      const branchW = 210;
+      const branchH = 52;
+      const leftX = cx - 180;
+      const rightX = cx + 180;
+
+      // 分支線 Left (符合 IF) - 雙行
+      svg += `
+        <path class="fl-line" d="M ${cx - diaW} ${midY} L ${leftX} ${midY} L ${leftX} ${branchY}" marker-end="url(#flowArrow)"/>
+        <rect x="${(cx - diaW + leftX) / 2 - 25}" y="${midY - 14}" width="50" height="18" rx="3" fill="#ecfdf5" stroke="#10b981"/>
+        <text x="${(cx - diaW + leftX) / 2}" y="${midY - 1}" fill="#047857" font-size="10.5" font-weight="700" text-anchor="middle">符合</text>
+        <rect x="${leftX - branchW / 2}" y="${branchY}" width="${branchW}" height="${branchH}" rx="5" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.3"/>
+        <text class="fl-header" x="${leftX}" y="${branchY + 19}" fill="#047857">${esc(item.ifHeader)}</text>
+        <text class="fl-content" x="${leftX}" y="${branchY + 38}" fill="#15803d">${esc(item.ifContent)}</text>
+      `;
+
+      // 分支線 Right (不符 ELSE) - 雙行
+      const isElseErr = item.elseStatus === 'timeout';
+      svg += `
+        <path class="${isElseErr ? 'fl-line-err' : 'fl-line'}" d="M ${cx + diaW} ${midY} L ${rightX} ${midY} L ${rightX} ${branchY}" marker-end="${isElseErr ? 'url(#flowArrowErr)' : 'url(#flowArrow)'}"/>
+        <rect x="${(cx + diaW + rightX) / 2 - 25}" y="${midY - 14}" width="50" height="18" rx="3" fill="${isElseErr ? '#fef2f2' : '#f8fafc'}" stroke="${isElseErr ? '#ef4444' : '#94a3b8'}"/>
+        <text x="${(cx + diaW + rightX) / 2}" y="${midY - 1}" fill="${isElseErr ? '#dc2626' : '#475569'}" font-size="10.5" font-weight="700" text-anchor="middle">不符</text>
+        <rect x="${rightX - branchW / 2}" y="${branchY}" width="${branchW}" height="${branchH}" rx="5" fill="${isElseErr ? '#fef2f2' : '#f8fafc'}" stroke="${isElseErr ? '#ef4444' : '#94a3b8'}" stroke-width="1.3"/>
+        <text class="${isElseErr ? 'fl-header-err' : 'fl-header'}" x="${rightX}" y="${branchY + 19}">${esc(item.elseHeader)}</text>
+        <text class="${isElseErr ? 'fl-content-err' : 'fl-content'}" x="${rightX}" y="${branchY + 38}">${esc(item.elseContent)}</text>
+      `;
+
+      // 匯流至下一點
+      const joinY = branchY + branchH + 25;
+      svg += `
+        <path class="fl-line" d="M ${leftX} ${branchY + branchH} L ${leftX} ${joinY} L ${cx - 6} ${joinY}"/>
+        <path class="${isElseErr ? 'fl-line-err' : 'fl-line'}" d="M ${rightX} ${branchY + branchH} L ${rightX} ${joinY} L ${cx + 6} ${joinY}"/>
+        <circle cx="${cx}" cy="${joinY}" r="4" fill="#3b82f6"/>
+      `;
+      cy = joinY;
+    }
+  });
+
+  // 結束節點
+  svg += `
+    <line class="fl-line" x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy + 30}" marker-end="url(#flowArrow)"/>
+    <rect x="${cx - 65}" y="${cy + 30}" width="130" height="34" rx="17" fill="#64748b" stroke="#475569" stroke-width="1.5"/>
+    <text class="fl-text" x="${cx}" y="${cy + 51}" fill="#ffffff" font-weight="700">■ 結束 (End)</text>
+  `;
+  cy += 75;
+
+  const totalHeight = cy + 20;
+  const dom = $('#flowchartSvg');
+  dom.setAttribute('viewBox', `0 0 ${width} ${totalHeight}`);
+  dom.setAttribute('width', width); // 修正變數為 width
+  dom.setAttribute('height', totalHeight);
+  dom.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  dom.innerHTML = svg;
+}
+
+function generateFlowchartMermaidCode(includeReplies = false) {
+  const model = compileSequenceToFlowchart(includeReplies);
+  const lines = ['flowchart TD', '    Start([開始: ' + (model.title || '流程圖').replace(/[\[\]"]/g, '') + '])'];
+  let prevNode = 'Start';
+  let idx = 1;
+
+  model.items.forEach(item => {
+    if (item.kind === 'stage') {
+      const stageId = `Stage_${idx++}`;
+      lines.push(`    ${stageId}[["★ 區間: ${(item.title || '').replace(/[\[\]"]/g, '')}"]]`);
+      lines.push(`    ${prevNode} --> ${stageId}`);
+      prevNode = stageId;
+    } else if (item.kind === 'action') {
+      const actId = `Step_${idx++}`;
+      const cleanH = (item.header || '').replace(/[\[\]"]/g, '');
+      const cleanC = (item.content || '').replace(/[\[\]"]/g, '');
+      lines.push(`    ${actId}["<b>${cleanH}</b><br/>${cleanC}"]`);
+      lines.push(`    ${prevNode} --> ${actId}`);
+      prevNode = actId;
+    } else if (item.kind === 'decision') {
+      const decId = `Dec_${idx++}`;
+      const ifId = `If_${idx++}`;
+      const elseId = `Else_${idx++}`;
+      const mergeId = `Merge_${idx++}`;
+
+      const cleanIfH = (item.ifHeader || '').replace(/[\[\]"]/g, '');
+      const cleanIfC = (item.ifContent || '').replace(/[\[\]"]/g, '');
+      const cleanElseH = (item.elseHeader || '').replace(/[\[\]"]/g, '');
+      const cleanElseC = (item.elseContent || '').replace(/[\[\]"]/g, '');
+
+      lines.push(`    ${decId}{"是否 [${(item.condition || '').replace(/[\[\]"]/g, '')}]？"}`);
+      lines.push(`    ${prevNode} --> ${decId}`);
+      lines.push(`    ${decId} -- 符合 --> ${ifId}["<b>${cleanIfH}</b><br/>${cleanIfC}"]`);
+      lines.push(`    ${decId} -- 不符 --> ${elseId}["<b>${cleanElseH}</b><br/>${cleanElseC}"]`);
+      lines.push(`    ${ifId} --> ${mergeId}(( ))`);
+      lines.push(`    ${elseId} --> ${mergeId}`);
+      prevNode = mergeId;
+    }
+  });
+
+  lines.push(`    EndNode([結束])`);
+  lines.push(`    ${prevNode} --> EndNode`);
+  return lines.join('\n');
+}
+
+function updateFlowchartView() {
+  const includeReplies = $('#chkFlowIncludeReplies') ? $('#chkFlowIncludeReplies').checked : false;
+  renderFlowchartToSvg(includeReplies);
+  $('#flowchartMmdText').value = generateFlowchartMermaidCode(includeReplies);
+  const model = compileSequenceToFlowchart(includeReplies);
+  $('#flowchartSummaryLabel').textContent = includeReplies
+    ? `已轉換 ${model.items.length} 個步驟（雙行結構排版，已含回傳資訊）`
+    : `已轉換 ${model.items.length} 個主要流程步驟（雙行結構排版：節點通訊 / 動作內容）`;
+}
+
+/* 流程圖彈窗事件綁定 */
+$('#openFlowchartModal').onclick = () => {
+  $('#chkFlowIncludeReplies').checked = false; // 預設不勾選回傳資訊
+  updateFlowchartView();
+  openModal('#flowchartModal');
+};
+
+$('#closeFlowchartModal').onclick = () => closeModal('#flowchartModal');
+
+$('#chkFlowIncludeReplies').onchange = () => {
+  updateFlowchartView();
+};
+
+$('#tabFlowSvgBtn').onclick = () => {
+  $('#tabFlowSvgBtn').classList.add('active');
+  $('#tabFlowMmdBtn').classList.remove('active');
+  $('#flowchartSvgContainer').style.display = 'flex';
+  $('#flowchartMmdContainer').style.display = 'none';
+};
+
+$('#tabFlowMmdBtn').onclick = () => {
+  $('#tabFlowMmdBtn').classList.add('active');
+  $('#tabFlowSvgBtn').classList.remove('active');
+  $('#flowchartSvgContainer').style.display = 'none';
+  $('#flowchartMmdContainer').style.display = 'flex';
+};
+
+$('#copyFlowchartMmdBtn').onclick = () => {
+  const code = $('#flowchartMmdText').value;
+  navigator.clipboard.writeText(code).then(() => {
+    showToast('已成功複製 Mermaid 流程圖語法！');
+  }).catch(() => {
+    showToast('複製失敗，請手動複製文字');
+  });
+};
+
+$('#downloadFlowchartSvgBtn').onclick = () => {
+  const svgEl = $('#flowchartSvg');
+  svgEl.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  const svgText = '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(svgEl);
+  const blob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
+  triggerDownload(`${getState().title || 'flowchart'}-流程圖.svg`, blob);
+  showToast('流程圖 SVG 已成功匯出！');
+};
+
+$('#downloadFlowchartPngBtn').onclick = () => {
+  const svgEl = $('#flowchartSvg');
+  svgEl.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  const w = parseFloat(svgEl.getAttribute('width')) || 760;
+  const h = parseFloat(svgEl.getAttribute('height')) || 600;
+  const scale = 2;
+
+  const svgText = '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(svgEl);
+  const blob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(w * scale);
+    canvas.height = Math.round(h * scale);
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+
+    canvas.toBlob(pngBlob => {
+      URL.revokeObjectURL(url);
+      triggerDownload(`${getState().title || 'flowchart'}-流程圖.png`, pngBlob);
+      showToast('流程圖 PNG 圖檔已成功匯出！');
+    }, 'image/png');
+  };
+  img.onerror = () => {
+    URL.revokeObjectURL(url);
+    showToast('PNG 產生失敗');
+  };
+  img.src = url;
+};
+
+/* =========================================================================
+   專案開啟、儲存與匯出控制
+   ========================================================================= */
+
+$('#openSaveExportModal').onclick = () => {
+  const state = getState();
+  if (state.nodes.length === 0) return showToast('當前畫布為空，無法匯出');
+  $('#chkIncludeNotes').checked = true;
+  $('#chkExportPng').checked = true;
+  $('#chkExportSvg').checked = false;
+  $('#chkExportMermaid').checked = false;
+  $('#saveExportModal').hidden = false;
+};
+
+$('#closeSaveExportModal').onclick = () => $('#saveExportModal').hidden = true;
+$('#cancelSaveExportBtn').onclick = () => $('#saveExportModal').hidden = true;
+
+$('#confirmSaveExportBtn').onclick = async () => {
+  const includeNotes = $('#chkIncludeNotes').checked;
+  const wantPng = $('#chkExportPng').checked;
+  const wantSvg = $('#chkExportSvg').checked;
+  const wantMermaid = $('#chkExportMermaid').checked;
+
+  if (!wantPng && !wantSvg && !wantMermaid) {
+    return showToast('請至少勾選一種匯出格式！');
+  }
+
+  $('#saveExportModal').hidden = true;
+  const currentCanvas = getActiveCanvas();
+  const baseName = currentCanvas.state.title.trim() || currentCanvas.name || 'sequence-diagram';
+  let delay = 0;
+
+  if (wantPng) {
+    setTimeout(async () => {
+      try {
+        const pngBlob = await generatePngBlob(includeNotes);
+        triggerDownload(`${baseName}.png`, pngBlob);
+      } catch (e) {
+        showToast('PNG 產生失敗');
+      }
+    }, delay);
+    delay += 300;
+  }
+
+  if (wantSvg) {
+    setTimeout(() => {
+      const svgBlob = new Blob([getCleanSvgSource(includeNotes)], { type: 'image/svg+xml;charset=utf-8' });
+      triggerDownload(`${baseName}.svg`, svgBlob);
+    }, delay);
+    delay += 250;
+  }
+
+  if (wantMermaid) {
+    setTimeout(() => {
+      const mmdText = generateMermaidCode(includeNotes);
+      const mmdBlob = new Blob([mmdText], { type: 'text/plain;charset=utf-8' });
+      triggerDownload(`${baseName}.mmd`, mmdBlob);
+    }, delay);
+  }
+
+  showToast('已完成所選格式之匯出！');
+};
+
+function loadProjectData(data) {
+  if (Array.isArray(data.canvases) && data.canvases.length > 0) {
+    canvases = data.canvases.map(c => ({
+      id: c.id || uid('sheet'),
+      name: c.name || '第1頁',
+      state: {
+        title: typeof c.state?.title === 'string' ? c.state.title : '',
+        footerNote: typeof c.state?.footerNote === 'string' ? c.state.footerNote : '',
+        nodeGap: Number(c.state?.nodeGap) || 200,
+        stepGap: Number(c.state?.stepGap) || 100,
+        nodes: Array.isArray(c.state?.nodes) ? c.state.nodes : [],
+        messages: Array.isArray(c.state?.messages) ? c.state.messages : []
+      },
+      selection: { type: 'global', id: null },
+      undoStack: [],
+      redoStack: [],
+      historyDebounceTimer: null,
+      pendingHistorySnapshot: null
+    }));
+    activeCanvasId = data.activeCanvasId && canvases.some(c => c.id === data.activeCanvasId)
+      ? data.activeCanvasId
+      : canvases[0].id;
+  }
+  else if (data.state && Array.isArray(data.state.nodes)) {
+    const loadedCanvas = createEmptyCanvas(data.state.title || '第1頁');
+    loadedCanvas.state = {
+      title: typeof data.state.title === 'string' ? data.state.title : '',
+      footerNote: typeof data.state.footerNote === 'string' ? data.state.footerNote : '',
+      nodeGap: Number(data.state.nodeGap) || 200,
+      stepGap: Number(data.state.stepGap) || 100,
+      nodes: Array.isArray(data.state.nodes) ? data.state.nodes : [],
+      messages: Array.isArray(data.state.messages) ? data.state.messages : []
+    };
+    canvases = [loadedCanvas];
+    activeCanvasId = loadedCanvas.id;
+  } else {
+    throw new Error('格式不符合');
+  }
+
+  hasUnsavedChanges = false;
+  cleanOrphanMessages();
+  renderSheets();
+  renderCanvas();
+  renderTrees();
+  renderInspector();
+  updateHistoryButtons();
+}
+
+$('#openProjectBtn').onclick = async () => {
+  if ('showOpenFilePicker' in window) {
+    try {
+      const [handle] = await window.showOpenFilePicker({
+        types: [{
+          description: 'JSON 專案檔',
+          accept: { 'application/json': ['.json'] }
+        }],
+        multiple: false
+      });
+      const file = await handle.getFile();
+      const text = await file.text();
+      const data = JSON.parse(text);
+      loadProjectData(data);
+      currentFileHandle = handle;
+      hasUnsavedChanges = false;
+      updateSyncStatusUI('synced', handle.name);
+      showToast(`已開啟並成功連結：${handle.name}（全畫布即時同步中）`);
+      return;
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      console.warn('File System Access API 降級處理', err);
+    }
+  }
+  $('#projectFileInput').click();
+};
+
+$('#saveAsProjectBtn').onclick = async () => {
+  if ('showSaveFilePicker' in window) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: 'sequence-diagram.json',
+        types: [{
+          description: 'JSON 專案檔',
+          accept: { 'application/json': ['.json'] }
+        }]
+      });
+      currentFileHandle = handle;
+      const dataPackage = buildProjectDataPackage();
+      const writable = await handle.createWritable();
+      await writable.write(JSON.stringify(dataPackage, null, 2));
+      await writable.close();
+      hasUnsavedChanges = false;
+      updateSyncStatusUI('synced', handle.name);
+      showToast(`已成功另存並連結：${handle.name}（全畫布變更將自動同步）`);
+      return;
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      console.warn('另存失敗', err);
+    }
+  }
+
+  const dataPackage = buildProjectDataPackage();
+  const jsonBlob = new Blob([JSON.stringify(dataPackage, null, 2)], { type: 'application/json;charset=utf-8' });
+  triggerDownload('sequence-project-v2.9.json', jsonBlob);
+};
+
+$('#projectFileInput').onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = evt => {
+    try {
+      const data = JSON.parse(evt.target.result);
+      loadProjectData(data);
+      currentFileHandle = null;
+      hasUnsavedChanges = false;
+      updateSyncStatusUI('offline');
+      showToast('專案已完整載入！');
+    } catch (err) {
+      showToast('檔案格式錯誤，無法讀取專案');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+};
+
+$('#openMermaidModal').onclick = () => openModal('#mermaidModal');
+$('#closeMermaidModal').onclick = () => closeModal('#mermaidModal');
+$('#cancelMermaidBtn').onclick = () => closeModal('#mermaidModal');
+
+$('#applyMermaidBtn').onclick = () => {
+  let rawCode = $('#mermaidInput').value;
+  if (!rawCode.trim()) return showToast('請輸入 Mermaid 語法');
+
+  rawCode = rawCode.replace(/[\u00A0\u1680\u180e\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]/g, ' ');
+
+  const nodes = [];
+  const nodeMap = new Map();
+  const messages = [];
+  let currentAlt = null;
+
+  const ensure = (key, displayName) => {
+    const cleanKey = key.trim();
+    if (nodeMap.has(cleanKey)) return nodeMap.get(cleanKey);
+    const id = uid('n');
+    const finalName = (displayName || cleanKey).trim();
+    nodes.push({ id, name: finalName, fill: '#eef5ff', stroke: '#2563eb' });
+    nodeMap.set(cleanKey, id);
+    nodeMap.set(finalName, id);
+    return id;
+  };
+
+  const lines = rawCode.replace(/^```mermaid\s*/i, '').replace(/```\s*$/, '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+
+  for (const line of lines) {
+    if (/^sequenceDiagram$/i.test(line) || /^autonumber$/i.test(line)) continue;
+
+    const part = line.match(/^(?:participant|actor)\s+([^\s]+)(?:\s+as\s+(.+))?$/i);
+    if (part) {
+      const alias = part[1].trim();
+      const name = part[2] ? part[2].trim() : alias;
+      ensure(alias, name);
+      continue;
+    }
+
+    const altMatch = line.match(/^alt(?:\s+(.*))?$/i);
+    if (altMatch) {
+      currentAlt = {
+        id: uid('m'),
+        type: 'alt_frame',
+        condition: altMatch[1] ? altMatch[1].trim() : '',
+        spanFrom: null,
+        spanTo: null,
+        ifAction: '',
+        ifReply: '',
+        elseCondition: '',
+        elseAction: '',
+        elseStatus: 'normal',
+        inElse: false
+      };
+      continue;
+    }
+
+    const elseMatch = line.match(/^else(?:\s+(.*))?$/i);
+    if (elseMatch && currentAlt) {
+      currentAlt.inElse = true;
+      currentAlt.elseCondition = elseMatch[1] ? elseMatch[1].trim() : '';
+      continue;
+    }
+
+    if (/^end$/i.test(line) && currentAlt) {
+      if (!currentAlt.spanFrom && nodes.length > 0) currentAlt.spanFrom = nodes[0].id;
+      if (!currentAlt.spanTo && nodes.length > 1) currentAlt.spanTo = nodes[1].id;
+      if (!currentAlt.spanTo && nodes.length > 0) currentAlt.spanTo = nodes[0].id;
+      messages.push(currentAlt);
+      currentAlt = null;
+      continue;
+    }
+
+    const noteOverMatch = line.match(/^Note\s+over\s+([^,:\s]+)\s*,\s*([^,:\s]+)\s*:\s*(.*)$/i);
+    if (noteOverMatch) {
+      const spanFrom = ensure(noteOverMatch[1].trim());
+      const spanTo = ensure(noteOverMatch[2].trim());
+      const spanTitle = noteOverMatch[3].trim();
+      messages.push({
+        id: uid('m'),
+        type: 'note_over',
+        spanTitle,
+        spanFrom,
+        spanTo,
+        fill: '#fef08a',
+        stroke: '#ca8a04',
+        textColor: '#1e293b'
+      });
+      continue;
+    }
+
+    const msgMatch = line.match(/^([^\s\-]+)\s*(-->>|->>|-->|->)\s*([^:]+):\s*(.*)$/);
+    if (msgMatch) {
+      const fromKey = msgMatch[1].trim();
+      const arrow = msgMatch[2].trim();
+      const toKey = msgMatch[3].trim();
+      const content = msgMatch[4].trim();
+
+      const from = ensure(fromKey);
+      const to = ensure(toKey);
+      const isDashed = arrow.startsWith('--');
+
+      if (currentAlt) {
+        if (!currentAlt.spanFrom) currentAlt.spanFrom = from;
+        if (!currentAlt.spanTo) currentAlt.spanTo = to;
+
+        if (!currentAlt.inElse) {
+          if (!currentAlt.ifAction) {
+            currentAlt.ifAction = content;
+          } else {
+            currentAlt.ifReply = content;
+          }
+        } else {
+          currentAlt.elseAction = content;
+          if (/失敗|400|500|逾時|timeout|error/i.test(content)) {
+            currentAlt.elseStatus = 'timeout';
+          }
+        }
+        continue;
+      }
+
+      const lastMsg = messages[messages.length - 1];
+      if (from !== to && isDashed && lastMsg && lastMsg.from === to && lastMsg.to === from && !lastMsg.reply) {
+        lastMsg.reply = true;
+        lastMsg.replyName = content;
+      } else {
+        messages.push({
+          id: uid('m'),
+          from,
+          to,
+          name: content,
+          label: '',
+          textColor: '#1e293b',
+          highlight: 'none',
+          replyTextColor: '#1e293b',
+          replyHighlight: 'none',
+          type: isDashed ? (from === to ? 'async' : 'reply_only') : 'request',
+          status: 'normal',
+          reply: false,
+          replyName: '',
+          replyStatus: 'normal',
+          reqNote: '',
+          reqNoteSide: from === to ? 'left' : 'left',
+          resNote: '',
+          resNoteSide: 'right'
+        });
+      }
+    }
+  }
+
+  if (!nodes.length) return showToast('未能解析出節點！');
+
+  pushHistoryDirect();
+  const state = getState();
+  state.nodes = nodes;
+  state.messages = messages;
+  cleanOrphanMessages();
+  closeModal('#mermaidModal');
+  $('#mermaidInput').value = '';
+  selectItem('global');
+  scheduleAutoSave();
+  showToast('Mermaid 已成功載入至當前畫布！');
+};
+
+// 初始化啟動
+renderSheets();
+selectItem('global');
+updateHistoryButtons();
+updateSyncStatusUI('offline');
+</script>
+</body>
+</html>
